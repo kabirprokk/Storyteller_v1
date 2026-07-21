@@ -10,6 +10,16 @@ let editingStory = null;
 let browseState = { category: '', query: '', sort: 'latest' };
 let timer = null;
 let adminMode = false;
+const logo = 'assets/storyteller-mark.png';
+const brand = `<img class="brand-mark" src="${logo}" alt="" aria-hidden="true"><span>STORYTELLER</span>`;
+const icons = {
+  search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>',
+  bell: '<svg class="lucide lucide-bell" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" /></svg>',
+  theme: '<svg class="lucide lucide-sun-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v2" /><path d="M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715" /><path d="M16 12a4 4 0 0 0-4-4" /><path d="m19 5-1.256 1.256" /><path d="M20 12h2" /></svg>',
+  heart: '<svg class="lucide lucide-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /></svg>',
+  bookmark: '<svg class="lucide lucide-bookmark" viewBox="0 0 24 24" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" /></svg>',
+  share: '<svg class="lucide lucide-arrow-up-right" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7" /><path d="M7 7h10v10" /></svg>',
+};
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
   '&': '&amp;',
@@ -114,7 +124,7 @@ const card = story => `
     <div class="cover">
       <img src="${img(story)}" loading="lazy" alt="">
       <span class="pill">${esc(story.cat)}</span>
-      <button class="save" data-id="${story.id}" aria-label="Bookmark">Bookmark</button>
+      <button class="save icon-btn" data-id="${story.id}" aria-label="Bookmark">${icons.bookmark}</button>
     </div>
     <h3><a href="#story/${encodeURIComponent(story.slug)}">${esc(story.title)}</a></h3>
     <p>${esc(story.desc)}</p>
@@ -137,7 +147,7 @@ const footer = () => `
     <div class="container">
       <div class="footer-grid">
         <div>
-          <a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a>
+          <a class="brand" href="#home">${brand}</a>
           <p>A quiet place for loud ideas, human truths, and stories that stay with you.</p>
         </div>
         <div>
@@ -166,7 +176,7 @@ function setup() {
   return `
     <div class="page auth-wrap">
       <div class="auth-card">
-        <a class="brand"><b>S</b><span>STORYTELLER</span></a>
+        <a class="brand">${brand}</a>
         <span class="eyebrow">One secure step left</span>
         <h1>Connect the live database.</h1>
         <p>Add the project publishable key to <code>js/config.js</code>, then run the migration from <code>supabase/migrations</code> in the SQL Editor.</p>
@@ -323,11 +333,11 @@ function reader(story) {
       </header>
 
       <div class="reader-tools">
-        <button class="like" data-id="${story.id}">Like</button>
-        <button class="bookmark" data-id="${story.id}">Bookmark</button>
-        <button id="font">Aa</button>
-        <button id="readerMode">Mode</button>
-        <button class="share">Share</button>
+        <button class="like icon-btn" data-id="${story.id}" aria-label="Like">${icons.heart}</button>
+        <button class="bookmark icon-btn" data-id="${story.id}" aria-label="Bookmark">${icons.bookmark}</button>
+        <button id="font" class="icon-btn" aria-label="Adjust font size"><span>Aa</span></button>
+        <button id="readerMode" class="icon-btn" aria-label="Toggle reading mode">${icons.theme}</button>
+        <button class="share icon-btn" aria-label="Share story">${icons.share}</button>
       </div>
 
       <div class="reader-cover">
@@ -338,7 +348,7 @@ function reader(story) {
         <div class="reader-end">
           <span class="eyebrow">The end</span>
           <h2>Did this story move you?</h2>
-          <button class="btn primary like" data-id="${story.id}">Appreciate · ${story.likes}</button>
+          <button class="btn primary like" data-id="${story.id}"><span class="btn-icon">${icons.heart}</span><span>Appreciate · ${story.likes}</span></button>
           <div class="story-nav">
             ${prev ? `<a class="btn" href="#story/${prev.slug}">Previous story</a>` : '<span class="btn disabled">Previous story</span>'}
             ${next ? `<a class="btn" href="#story/${next.slug}">Next story</a>` : '<span class="btn disabled">Next story</span>'}
@@ -439,7 +449,7 @@ function auth(mode = 'signin', msg = '') {
   return `
     <div class="page auth-wrap">
       <form class="auth-card">
-        <a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a>
+        <a class="brand" href="#home">${brand}</a>
         <span class="eyebrow">${signup ? 'Join us' : 'Welcome back'}</span>
         <h1>${signup ? 'Tell your story.' : 'Continue your story.'}</h1>
         <p>${esc(msg || 'Read, write, save, and join the conversation.')}</p>
@@ -530,7 +540,7 @@ function resetPassword() {
   return `
     <div class="page auth-wrap">
       <form class="auth-card resetForm">
-        <a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a>
+        <a class="brand" href="#home">${brand}</a>
         <span class="eyebrow">Secure your account</span>
         <h1>Choose a new password.</h1>
         <p>Use at least eight characters and avoid reusing an old password.</p>
@@ -547,7 +557,7 @@ function legal(kind) {
   return `
     <div class="page legal">
       <div class="legal-copy">
-        <a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a>
+        <a class="brand" href="#home">${brand}</a>
         <span class="eyebrow">${privacy ? 'Privacy' : 'Terms'}</span>
         <h1>${privacy ? 'Your stories. Your data.' : 'A thoughtful community.'}</h1>
         <p>Last updated July 21, 2026</p>
@@ -641,7 +651,7 @@ async function admin() {
   return `
     <div class="page admin-shell">
       <aside class="admin-side">
-        <a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a>
+        <a class="brand" href="#home">${brand}</a>
         <span class="eyebrow">Control room</span>
         <a href="#admin">Overview</a>
         <a href="#admin-stories">Stories</a>
@@ -1049,6 +1059,13 @@ function toggleTheme(force) {
   else if (force === 'dark') document.body.classList.remove('light');
   else document.body.classList.toggle('light');
   localStorage.theme = document.body.classList.contains('light') ? 'light' : 'dark';
+  syncChromeIcons();
+}
+
+function syncChromeIcons() {
+  $('#searchBtn') && ($('#searchBtn').innerHTML = icons.search);
+  $('#bell') && ($('#bell').innerHTML = `${icons.bell}<i></i>`);
+  $('#theme') && ($('#theme').innerHTML = icons.theme);
 }
 
 function authFail(error) {
@@ -1129,6 +1146,7 @@ $('#markRead').onclick = async () => {
 
 $('#theme').onclick = () => toggleTheme();
 if (localStorage.theme === 'light') document.body.classList.add('light');
+syncChromeIcons();
 
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape') overlay.classList.remove('open');
