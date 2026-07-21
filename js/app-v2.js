@@ -829,11 +829,12 @@ function bind() {
 
   $('.followAuthor')?.addEventListener('click', async event => {
     try {
-      const targetId = event.currentTarget.dataset.id;
+      const button = event.currentTarget;
+      const targetId = button?.dataset.id;
       if (!targetId) return toast('Writer not available');
       if (session && session.user.id === targetId) return toast('You cannot follow yourself');
       const following = await StoryAPI.follow(targetId);
-      event.currentTarget.textContent = following ? 'Following' : 'Follow';
+      if (button) button.textContent = following ? 'Following' : 'Follow';
       toast(following ? 'Author followed' : 'Author unfollowed');
     } catch (error) {
       authFail(error);
