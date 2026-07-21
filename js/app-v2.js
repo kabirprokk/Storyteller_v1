@@ -326,7 +326,9 @@ function reader(story) {
             <div class="meta">${esc(story.date)} · ${esc(story.time)} · ${story.views} views</div>
           </div>
           <div class="author-actions">
-            <button class="btn followAuthor" data-id="${story.authorId}">Follow</button>
+            ${session && session.user.id === story.authorId
+              ? '<span class="btn disabled">Your story</span>'
+              : `<button class="btn followAuthor" data-id="${story.authorId}">Follow</button>`}
             <button class="btn reportStory">Report</button>
           </div>
         </div>
@@ -827,7 +829,10 @@ function bind() {
 
   $('.followAuthor')?.addEventListener('click', async event => {
     try {
-      const following = await StoryAPI.follow(event.currentTarget.dataset.id);
+      const targetId = event.currentTarget.dataset.id;
+      if (!targetId) return toast('Writer not available');
+      if (session && session.user.id === targetId) return toast('You cannot follow yourself');
+      const following = await StoryAPI.follow(targetId);
       event.currentTarget.textContent = following ? 'Following' : 'Follow';
       toast(following ? 'Author followed' : 'Author unfollowed');
     } catch (error) {

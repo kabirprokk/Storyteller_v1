@@ -43,7 +43,16 @@
     async myStories(status) { const session=await this.session();if(!session)return[];let q=required().from('stories').select(storySelect).eq('author_id',session.user.id).order('updated_at',{ascending:false});if(status)q=q.eq('status',status);const {data,error}=await q;if(error)throw error;return data.map(normalize); },
     async storyById(id) { const {data,error}=await required().from('stories').select(storySelect).eq('id',id).single();if(error)throw error;return normalize(data); },
     async deleteMyStory(id) { const {error}=await required().from('stories').delete().eq('id',id);if(error)throw error; },
-    async follow(profileId) { const session=await this.session();if(!session)throw new Error('Sign in first');const key={follower_id:session.user.id,following_id:profileId};const {data}=await required().from('follows').select('following_id').match(key).maybeSingle();if(data){const {error}=await required().from('follows').delete().match(key);if(error)throw error;return false}const {error}=await required().from('follows').insert(key);if(error)throw error;return true; },
+    async follow(profileId) {
+      const session=await this.session();
+      if(!session)throw new Error('Sign in first');
+      if(!profileId)throw new Error('Missing profile to follow');
+      if(profileId===session.user.id)throw new Error('You cannot follow yourself');
+      const key={follower_id:session.user.id,following_id:profileId};
+      const {data}=await required().from('follows').select('following_id').match(key).maybeSingle();
+      if(data){const {error}=await required().from('follows').delete().match(key);if(error)throw error;return false}
+      const {error}=await required().from('follows').insert(key);if(error)throw error;return true;
+    },
     async reportStory(storyId,reason) { const session=await this.session();if(!session)throw new Error('Sign in to report');const {error}=await required().from('reports').insert({reporter_id:session.user.id,story_id:storyId,reason});if(error)throw error; },
     async library(kind) { const session=await this.session();if(!session)return[];if(kind==='drafts')return this.myStories('draft');const table=kind==='liked'?'likes':kind==='history'?'reading_history':'bookmarks';const relation=kind==='history'?'story_id,progress,last_read_at,stories('+storySelect+')':'story_id,created_at,stories('+storySelect+')';const {data,error}=await required().from(table).select(relation).eq('user_id',session.user.id).order(kind==='history'?'last_read_at':'created_at',{ascending:false}).limit(50);if(error)throw error;return data.filter(x=>x.stories).map(x=>normalize(x.stories)); },
     async view(storyId) { await required().rpc('increment_story_view',{target:storyId}); },
