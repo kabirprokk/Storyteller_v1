@@ -38,6 +38,16 @@
     async profile() { const session=await this.session();if(!session)return null;const {data,error}=await required().from('profiles').select('*').eq('id',session.user.id).single();if(error)throw error;return data; },
     async myStories(status) { const session=await this.session();if(!session)return[];let q=required().from('stories').select(storySelect).eq('author_id',session.user.id).order('updated_at',{ascending:false});if(status)q=q.eq('status',status);const {data,error}=await q;if(error)throw error;return data.map(normalize); },
     async view(storyId) { await required().rpc('increment_story_view',{target:storyId}); },
-    async markRead(storyId,progress) { const session=await this.session();if(!session)return;await required().from('reading_history').upsert({user_id:session.user.id,story_id:storyId,progress,last_read_at:new Date().toISOString()}); }
+    async markRead(storyId,progress) { const session=await this.session();if(!session)return;await required().from('reading_history').upsert({user_id:session.user.id,story_id:storyId,progress,last_read_at:new Date().toISOString()}); },
+    async isAdmin() { const p=await this.profile();return p?.role==='admin'&&!p?.is_suspended; },
+    async adminMetrics() { const {data,error}=await required().rpc('admin_dashboard_metrics');if(error)throw error;return data; },
+    async adminStories() { const {data,error}=await required().from('stories').select('id,title,status,is_featured,view_count,created_at,profiles!stories_author_id_fkey(display_name)').order('created_at',{ascending:false}).limit(100);if(error)throw error;return data; },
+    async adminComments() { const {data,error}=await required().from('comments').select('id,body,is_hidden,created_at,profiles(display_name),stories(title)').order('created_at',{ascending:false}).limit(100);if(error)throw error;return data; },
+    async adminUsers() { const {data,error}=await required().from('profiles').select('id,username,display_name,role,is_suspended,created_at').order('created_at',{ascending:false}).limit(100);if(error)throw error;return data; },
+    async adminReports() { const {data,error}=await required().from('reports').select('id,reason,status,created_at,profiles!reports_reporter_id_fkey(display_name),stories(title)').order('created_at',{ascending:false}).limit(100);if(error)throw error;return data; },
+    async adminUpdate(table,id,changes) { const {error}=await required().from(table).update(changes).eq('id',id);if(error)throw error; },
+    async adminSetUser(userId,role=null,suspended=null) { const {error}=await required().rpc('admin_set_user_state',{target:userId,new_role:role,suspended});if(error)throw error; },
+    async adminDelete(table,id) { const {error}=await required().from(table).delete().eq('id',id);if(error)throw error; },
+    async adminDeleteUser(userId) { const {data,error}=await required().rpc('admin_delete_user',{target:userId});if(error)throw error;return data; }
   };
 })();
