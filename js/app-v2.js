@@ -1,26 +1,1169 @@
-const $=(s,p=document)=>p.querySelector(s),$$=(s,p=document)=>[...p.querySelectorAll(s)];let stories=[],categories=[],session=null,currentStory=null,draftId=null,timer,adminMode=false;
-const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),img=s=>esc(s.cover||'assets/hero.png');
-const card=s=>`<article class="story reveal"><div class="cover"><img src="${img(s)}" loading="lazy" alt=""><span class="pill">${esc(s.cat)}</span><button class="save" data-id="${s.id}" aria-label="Bookmark">♧</button></div><h3><a href="#story/${encodeURIComponent(s.slug)}">${esc(s.title)}</a></h3><p>${esc(s.desc)}</p><div class="between meta"><span class="author"><i class="avatar peach">${esc(s.ini)}</i>${esc(s.author)}</span><span>${esc(s.time)} · ♡ ${s.likes}</span></div></article>`;
-const empty=(a,b)=>`<div class="empty"><h3>${esc(a)}</h3><p>${esc(b)}</p></div>`,footer=()=>`<footer><div class="container"><div class="footer-grid"><div><a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a><p>A quiet place for loud ideas, human truths, and stories that stay with you.</p></div><div><h5>DISCOVER</h5><a href="#explore">Explore</a><a href="#explore">Trending</a></div><div><h5>CREATE</h5><a href="#write">Write</a><a href="#profile">Profile</a></div><div><h5>ACCOUNT</h5><a href="#auth/signin">${session?'Account':'Sign in'}</a>${adminMode?'<a href="#admin">Admin console</a>':''}<a href="#privacy">Privacy</a><a href="#terms">Terms</a></div></div></div></footer>`;
-function setup(){return `<div class="page auth-wrap"><div class="auth-card"><a class="brand"><b>S</b><span>STORYTELLER</span></a><span class="eyebrow">One secure step left</span><h1>Connect the live database.</h1><p>Add the project publishable key to <code>js/config.js</code>, then run the migration from <code>supabase/migrations</code> in the SQL Editor.</p><a class="btn primary" target="_blank" rel="noreferrer" href="https://supabase.com/dashboard/project/syemkwyfefzdmogtsvmi/settings/api">Open API settings</a></div></div>`}
-function home(){let f=stories.find(s=>s.featured)||stories[0];return `<div class="page"><div class="hero"><div class="hero-bg" ${f?`style="background-image:linear-gradient(90deg,#050505f5,#050505a6 48%,transparent 78%),linear-gradient(0deg,var(--bg),transparent 30%),url('${img(f)}')"`:''}></div><div class="container"><div class="hero-copy"><span class="eyebrow">Stories that stay</span><h1>Every Story<br>Deserves to Be <em>Told.</em></h1><p>A home for honest voices, untold worlds, and the beautiful mess of being human.</p><div class="buttons"><a class="btn primary" href="${f?'#explore':'#write'}">${f?'Start reading':'Write the first story'} →</a><a class="btn" href="#write">Write your story</a></div></div></div></div>${f?`<section><div class="container"><div class="section-head"><div><span class="eyebrow">Editor's choice</span><h2>Featured this week</h2></div></div><div class="featured"><a class="feature-card" style="background-image:linear-gradient(0deg,#000e,transparent 70%),url('${img(f)}')" href="#story/${f.slug}"><div><span class="eyebrow">${esc(f.cat)} · ${esc(f.time)}</span><h2>${esc(f.title)}</h2><p>${esc(f.desc)}</p><span class="author"><i class="avatar peach">${esc(f.ini)}</i>${esc(f.author)}</span></div></a><div class="ranks">${stories.slice(1,5).map((s,i)=>`<a class="rank" href="#story/${s.slug}"><strong>0${i+1}</strong><div><h3>${esc(s.title)}</h3><small>${esc(s.author)} · ${esc(s.time)}</small></div></a>`).join('')}</div></div></div></section><section><div class="container"><div class="section-head"><div><span class="eyebrow">Fresh perspectives</span><h2>Recently published</h2></div></div><div class="grid">${stories.slice(0,6).map(card).join('')}</div></div></section>`:''}<section><div class="container"><div class="section-head"><div><span class="eyebrow">Find your next read</span><h2>Explore categories</h2></div></div><div class="chips">${categories.map(c=>`<a class="chip" href="#explore">${esc(c.name)}</a>`).join('')}</div></div></section>${footer()}</div>`}
-function explore(){return `<div class="page"><div class="explore-head container"><span class="eyebrow">The story archive</span><h1 class="page-title">Explore worlds<br>worth entering.</h1></div><div class="tools"><div class="container toolrow"><label>⌕<input id="exploreSearch" placeholder="Search stories"></label><select id="category"><option value="">All categories</option>${categories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select><select id="sort"><option value="latest">Latest</option><option value="views">Most Viewed</option><option value="liked">Most Liked</option></select></div></div><section><div class="container"><div class="grid" id="storyGrid">${stories.length?stories.map(card).join(''):empty('No stories yet','Publish the first story.')}</div><button id="more" class="btn load-more">Load more</button></div></section>${footer()}</div>`}
-function reader(s){if(!s)return `<div class="page auth-wrap">${empty('Story not found','It may have been removed.')}</div>`;let content=DOMPurify.sanitize(s.content||'',{USE_PROFILES:{html:true},FORBID_TAGS:['style','form','input','button','iframe']});return `<article class="page reader"><header class="reader-head"><span class="eyebrow">${esc(s.cat)}</span><h1>${esc(s.title)}</h1><p class="subtitle">${esc(s.desc)}</p><div class="byline"><span class="avatar peach">${esc(s.ini)}</span><div><b>${esc(s.author)}</b><div class="meta">${esc(s.date)} · ${esc(s.time)} · ${s.views} views</div></div><div class="author-actions"><button class="btn followAuthor" data-id="${s.authorId}">Follow</button><button class="btn reportStory">Report</button></div></div></header><div class="reader-tools"><button class="like" data-id="${s.id}">♡</button><button class="bookmark" data-id="${s.id}">♧</button><button id="font">Aa</button><button class="share">↗</button></div><div class="reader-cover"><img src="${img(s)}" alt=""></div><div class="reader-body">${content}<div class="reader-end"><span class="eyebrow">The end</span><h2>Did this story move you?</h2><button class="btn primary like" data-id="${s.id}">♡ Appreciate · ${s.likes}</button></div></div><div class="comments"><div class="section-head"><div><span class="eyebrow">Conversation</span><h2>Comments</h2></div></div><div id="commentList"></div><textarea id="commentBody" maxlength="2000" placeholder="Leave a thoughtful response…"></textarea><button class="btn primary" id="comment">Post comment</button></div></article>`}
-function write(s=null){if(!session)return auth('signin','Sign in to write and publish.');draftId=s?.id||null;return `<div class="page editor"><div class="editor-top"><div><span class="eyebrow">${s?'Edit story':'New story'}</span><small id="saveState">${s?'Saved draft':'Draft not saved'}</small></div><div class="buttons">${s?'<button class="btn danger deleteOwnStory">Delete</button>':''}<button class="btn saveDraft">Save draft</button><button class="btn primary publish">Publish</button></div></div><input class="title-input" id="storyTitle" maxlength="160" value="${esc(s?.title||'')}" placeholder="Your story begins with a title…"><input class="subtitle-input" id="storySubtitle" maxlength="300" value="${esc(s?.desc||'')}" placeholder="Add a compelling subtitle"><div class="editor-bar"><button data-cmd="bold"><b>B</b></button><button data-cmd="italic"><i>I</i></button><button data-cmd="formatBlock">❞</button><button data-cmd="insertUnorderedList">☷</button></div><div class="editor-area" id="storyContent" contenteditable="true">${s?.content||'<p>Tell your story…</p>'}</div><div class="fields"><div class="field"><label>Category</label><select id="storyCategory"><option value="">Select category</option>${categories.map(c=>`<option value="${c.id}" ${String(s?.categoryId)===String(c.id)?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div><div class="field"><label>Tags</label><input id="storyTags" value="${esc((s?.tags||[]).join(', '))}" placeholder="memory, travel, life"></div><div class="field"><label>Cover image</label><input id="storyCover" type="file" accept="image/jpeg,image/png,image/webp,image/avif"></div></div></div>`}
-function auth(mode='signin',msg=''){let up=mode==='signup';return `<div class="page auth-wrap"><form class="auth-card"><a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a><span class="eyebrow">${up?'Join us':'Welcome back'}</span><h1>${up?'Tell your story.':'Continue your story.'}</h1><p>${esc(msg||'Read, write, save, and join the conversation.')}</p><button type="button" class="social" data-provider="google">G &nbsp; Continue with Google</button><button type="button" class="social" data-provider="github">⌘ &nbsp; Continue with GitHub</button><div class="divider">or use email</div>${up?'<div class="field"><label>Display name</label><input id="authName" required maxlength="80"></div>':''}<div class="field"><label>Email</label><input id="authEmail" type="email" required></div><div class="field"><label>Password</label><input id="authPassword" type="password" required minlength="8"></div><button class="btn primary authSubmit">${up?'Create account':'Sign in'}</button><div class="between"><button type="button" class="meta authMode">${up?'Already registered?':'Create account'}</button><button type="button" class="meta forgot">Forgot password?</button></div></form></div>`}
-async function profile(tab='published'){let p=await StoryAPI.profile();if(!p)return auth();let mine=tab==='published'?await StoryAPI.myStories('published'):await StoryAPI.library(tab);let items=mine.map(s=>tab==='drafts'?`<article class="story"><div class="cover"><img src="${img(s)}"><span class="pill">Draft</span></div><h3>${esc(s.title)}</h3><p>${esc(s.desc)}</p><div class="buttons"><a class="btn" href="#write/${s.id}">Continue editing</a></div></article>`:card(s)).join('');return `<div class="page"><section class="profile-hero"><div class="container profile-layout"><div class="profile-avatar">${p.avatar_url?`<img src="${esc(p.avatar_url)}" alt="">`:esc(p.display_name.split(/\s+/).map(x=>x[0]).slice(0,2).join(''))}</div><div><span class="eyebrow">Writer profile</span><h1 class="page-title">${esc(p.display_name)}</h1><p class="subtitle">${esc(p.bio||'Your story is still being written.')}</p><p class="meta">@${esc(p.username)} · ${esc(p.role)}</p><div class="buttons"><button class="btn editProfile">Edit profile</button>${adminMode?'<a class="btn" href="#admin">Admin console</a>':''}<button class="btn signOut">Sign out</button></div></div></div></section><div class="profile-editor container" hidden><div class="field"><label>Display name</label><input id="profileName" maxlength="80" value="${esc(p.display_name)}"></div><div class="field"><label>Username</label><input id="profileUsername" maxlength="30" value="${esc(p.username)}"></div><div class="field"><label>Bio</label><textarea id="profileBio" maxlength="500">${esc(p.bio)}</textarea></div><div class="field"><label>Avatar</label><input id="profileAvatar" type="file" accept="image/jpeg,image/png,image/webp"></div><button class="btn primary saveProfile">Save profile</button></div><section><div class="container"><div class="chips profile-tabs">${[['published','Published'],['drafts','Drafts'],['liked','Liked'],['bookmarks','Bookmarks'],['history','History']].map(x=>`<a class="chip ${tab===x[0]?'active':''}" href="#profile/${x[0]}">${x[1]}</a>`).join('')}</div><div class="grid profile-grid">${items||empty('Nothing here yet',tab==='drafts'?'Your saved drafts appear here.':'Your library will grow as you read.')}</div></div></section>${footer()}</div>`}
-function resetPassword(){return `<div class="page auth-wrap"><form class="auth-card resetForm"><a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a><span class="eyebrow">Secure your account</span><h1>Choose a new password.</h1><p>Use at least eight characters and avoid reusing an old password.</p><div class="field"><label>New password</label><input id="newPassword" type="password" minlength="8" required></div><div class="field"><label>Confirm password</label><input id="confirmPassword" type="password" minlength="8" required></div><button class="btn primary">Update password</button></form></div>`}
-function legal(kind){let privacy=kind==='privacy';return `<div class="page legal"><div class="legal-copy"><a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a><span class="eyebrow">${privacy?'Privacy':'Terms'}</span><h1>${privacy?'Your stories. Your data.':'A thoughtful community.'}</h1><p>Last updated July 21, 2026</p>${privacy?`<h2>What we collect</h2><p>We store account details, profile information, stories, comments, reactions, bookmarks and reading history needed to operate STORYTELLER. Google sign-in supplies your basic profile and email; we do not receive your Google password.</p><h2>How we use information</h2><p>Information is used to authenticate you, publish your work, personalize your library, moderate the community and secure the service. We do not sell personal information.</p><h2>Your choices</h2><p>You may edit your profile and delete your content. Contact the site administrator to request complete account deletion.</p><h2>Service providers</h2><p>Supabase provides authentication, database and storage infrastructure. GitHub Pages hosts the website.</p>`:`<h2>Publish responsibly</h2><p>You retain ownership of your writing and grant STORYTELLER permission to display content you publish. Do not post illegal, abusive, plagiarized or privacy-violating material.</p><h2>Moderation</h2><p>Administrators may hide or remove content, suspend accounts and act on reports to protect the community.</p><h2>Accounts</h2><p>Keep your account secure and provide accurate information. You are responsible for activity performed through your account.</p><h2>Availability</h2><p>The service may change as it develops. We aim for reliability but cannot guarantee uninterrupted availability.</p>`}<p>Questions can be directed to the project administrator.</p></div>${footer()}</div>`}
-async function admin(){if(!adminMode)return `<div class="page auth-wrap">${empty('Access denied','This area is reserved for administrators.')}</div>`;let [m,ss,cs,us,rs]=await Promise.all([StoryAPI.adminMetrics(),StoryAPI.adminStories(),StoryAPI.adminComments(),StoryAPI.adminUsers(),StoryAPI.adminReports()]);let storyRows=ss.map(s=>`<div class="control-row"><div><b>${esc(s.title)}</b><small>${esc(s.profiles?.display_name)} · ${esc(s.status)} · ${s.view_count} views</small></div><div class="row-actions"><button data-admin="feature" data-id="${s.id}" data-value="${!s.is_featured}">${s.is_featured?'Unfeature':'Feature'}</button><button class="danger" data-admin="delete-story" data-id="${s.id}">Delete</button></div></div>`).join('');let userRows=us.map(u=>`<div class="control-row"><div><b>${esc(u.display_name)}</b><small>@${esc(u.username)} · ${esc(u.role)}</small></div><div class="row-actions"><button data-admin="role" data-id="${u.id}" data-value="${u.role==='admin'?'writer':'admin'}">Make ${u.role==='admin'?'writer':'admin'}</button><button data-admin="suspend" data-id="${u.id}" data-value="${!u.is_suspended}">${u.is_suspended?'Restore':'Suspend'}</button><button class="danger" data-admin="delete-user" data-id="${u.id}">Delete</button></div></div>`).join('');let commentRows=cs.map(c=>`<div class="control-row"><div><b>${esc(c.profiles?.display_name)} on ${esc(c.stories?.title)}</b><small>${esc(c.body)}</small></div><div class="row-actions"><button data-admin="hide-comment" data-id="${c.id}" data-value="${!c.is_hidden}">${c.is_hidden?'Show':'Hide'}</button><button class="danger" data-admin="delete-comment" data-id="${c.id}">Delete</button></div></div>`).join('');return `<div class="page admin-shell"><aside class="admin-side"><a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a><span class="eyebrow">Control room</span><a href="#admin">Overview</a><a href="#admin-stories">Stories</a><a href="#admin-users">Users</a><a href="#admin-comments">Comments</a><a href="#admin-reports">Reports</a><button class="btn signOut">Sign out</button></aside><main class="admin-content"><div class="admin-title"><div><span class="eyebrow">Live operations</span><h1>Editorial control.</h1></div><span class="live-badge">● Live</span></div><div class="metric-grid"><div><small>Readers</small><b>${m.users||0}</b></div><div><small>Stories</small><b>${m.stories||0}</b></div><div><small>Total views</small><b>${m.views||0}</b></div><div><small>Open reports</small><b>${m.open_reports||0}</b></div></div><section class="admin-section" id="admin-stories"><div class="between"><h2>Stories</h2><span>${ss.length} records</span></div>${storyRows||empty('No stories','Published and draft stories appear here.')}</section><section class="admin-section" id="admin-users"><div class="between"><h2>People</h2><span>${us.length} accounts</span></div>${userRows}</section><section class="admin-section" id="admin-comments"><div class="between"><h2>Comments</h2><span>${cs.length} responses</span></div>${commentRows||empty('No comments','Community responses appear here.')}</section><section class="admin-section" id="admin-reports"><div class="between"><h2>Reports</h2><span>${rs.length} reports</span></div>${rs.map(r=>`<div class="control-row"><div><b>${esc(r.reason)}</b><small>${esc(r.profiles?.display_name)} · ${esc(r.status)}</small></div><button data-admin="resolve" data-id="${r.id}">Resolve</button></div>`).join('')||empty('No reports','Your community is clear.')}</section></main></div>`}
-async function route(){if(!StoryAPI.configured){$('#app').innerHTML=setup();return}let [page,arg]=(location.hash.slice(1)||'home').split('/');$('#app').innerHTML='<div class="page auth-wrap"><div class="loader"></div></div>';try{if(page==='story'){currentStory=await StoryAPI.story(decodeURIComponent(arg||''));await StoryAPI.view(currentStory.id);$('#app').innerHTML=reader(currentStory)}else if(page==='profile')$('#app').innerHTML=await profile(arg||'published');else if(page==='admin'||page.startsWith('admin-'))$('#app').innerHTML=await admin();else if(page==='write')$('#app').innerHTML=write(arg?await StoryAPI.storyById(arg):null);else $('#app').innerHTML=page==='home'?home():page==='explore'?explore():page==='auth'?auth(arg):page==='reset-password'?resetPassword():page==='privacy'||page==='terms'?legal(page):home();scrollTo(0,0);bind();if(page==='story'){loadComments();StoryAPI.markRead(currentStory.id,10)}if(page.startsWith('admin-'))setTimeout(()=>document.getElementById(page)?.scrollIntoView({behavior:'smooth'}),50)}catch(e){fail(e)}}
-async function saveStory(publish){let title=$('#storyTitle').value.trim();if(title.length<3)throw Error('Add a title with at least 3 characters');let cover=null,file=$('#storyCover').files[0];if(file)cover=await StoryAPI.uploadCover(file);let r=await StoryAPI.saveStory({id:draftId,title,subtitle:$('#storySubtitle').value,content:$('#storyContent').innerHTML,category:$('#storyCategory').value,tags:$('#storyTags').value.split(',').map(x=>x.trim()).filter(Boolean),cover},publish);draftId=r.id;$('#saveState').textContent=publish?'Published':'Draft saved';toast(publish?'Story published':'Draft saved');if(publish){await refresh();location.hash=`story/${r.slug}`}}
-async function loadComments(){let rows=await StoryAPI.comments(currentStory.id);$('#commentList').innerHTML=rows.length?rows.map(c=>`<div class="notice"><span class="avatar">${esc(c.profiles.display_name[0])}</span><p><b>${esc(c.profiles.display_name)}</b><small>${new Date(c.created_at).toLocaleDateString()}</small><span>${esc(c.body)}</span></p></div>`).join(''):empty('No comments yet','Start the conversation.')}
-function bind(){$$('.save,.bookmark').forEach(b=>b.onclick=async e=>{e.preventDefault();try{toast(await StoryAPI.toggle('bookmarks',b.dataset.id)?'Saved':'Bookmark removed')}catch(x){authFail(x)}});$$('.like').forEach(b=>b.onclick=async()=>{try{toast(await StoryAPI.toggle('likes',b.dataset.id)?'Story appreciated':'Like removed')}catch(x){authFail(x)}});$('#comment')?.addEventListener('click',async()=>{try{let body=$('#commentBody').value.trim();if(body){await StoryAPI.comment(currentStory.id,body);$('#commentBody').value='';await loadComments()}}catch(x){authFail(x)}});$('.followAuthor')?.addEventListener('click',async e=>{try{let following=await StoryAPI.follow(e.currentTarget.dataset.id);e.currentTarget.textContent=following?'Following':'Follow';toast(following?'Author followed':'Author unfollowed')}catch(x){authFail(x)}});$('.reportStory')?.addEventListener('click',async()=>{let reason=prompt('Why are you reporting this story?');if(reason?.trim().length>=5)try{await StoryAPI.reportStory(currentStory.id,reason.trim());toast('Report sent to moderators')}catch(x){authFail(x)}});$('#category')?.addEventListener('change',filter);$('#sort')?.addEventListener('change',filter);$('#exploreSearch')?.addEventListener('input',debounce(filter,300));$('#more')?.addEventListener('click',more);$$('[data-cmd]').forEach(b=>b.onclick=()=>document.execCommand(b.dataset.cmd,false,b.dataset.cmd==='formatBlock'?'blockquote':null));$('#storyContent')?.addEventListener('input',()=>{clearTimeout(timer);$('#saveState').textContent='Unsaved';timer=setTimeout(()=>saveStory(false).catch(e=>$('#saveState').textContent=e.message),1500)});$('.saveDraft')?.addEventListener('click',()=>saveStory(false).catch(authFail));$('.publish')?.addEventListener('click',()=>saveStory(true).catch(authFail));$('.deleteOwnStory')?.addEventListener('click',async()=>{if(confirm('Delete this story permanently?'))try{await StoryAPI.deleteMyStory(draftId);toast('Story deleted');location.hash='profile/drafts'}catch(e){authFail(e)}});$('#font')?.addEventListener('click',()=>$('.reader-body').classList.toggle('reader-large'));$('.share')?.addEventListener('click',()=>navigator.share?navigator.share({title:currentStory.title,url:location.href}):navigator.clipboard.writeText(location.href).then(()=>toast('Link copied')));$('.auth-card:not(.resetForm)')?.addEventListener('submit',handleAuth);$('.resetForm')?.addEventListener('submit',handlePasswordReset);$$('.social').forEach(b=>b.onclick=()=>StoryAPI.social(b.dataset.provider).catch(authFail));$('.authMode')?.addEventListener('click',()=>location.hash=location.hash.includes('signup')?'auth/signin':'auth/signup');$('.forgot')?.addEventListener('click',async()=>{let email=$('#authEmail').value;if(!email)return toast('Enter your email');try{await StoryAPI.resetPassword(email);toast('Check your email')}catch(e){authFail(e)}});$('.editProfile')?.addEventListener('click',()=>$('.profile-editor').hidden=!$('.profile-editor').hidden);$('.saveProfile')?.addEventListener('click',saveProfile);$('.signOut')?.addEventListener('click',async()=>{await StoryAPI.signOut();location.hash='home'});$$('[data-admin]').forEach(b=>b.onclick=()=>adminAction(b))}
-async function handlePasswordReset(e){e.preventDefault();let a=$('#newPassword').value,b=$('#confirmPassword').value;if(a!==b)return toast('Passwords do not match');try{await StoryAPI.updatePassword(a);toast('Password updated');location.hash='profile'}catch(x){authFail(x)}}
-async function saveProfile(){try{let avatar=null,file=$('#profileAvatar').files[0];if(file)avatar=await StoryAPI.uploadAvatar(file);await StoryAPI.updateProfile({display_name:$('#profileName').value.trim(),username:$('#profileUsername').value.trim().toLowerCase(),bio:$('#profileBio').value.trim(),...(avatar&&{avatar_url:avatar})});toast('Profile updated');route()}catch(x){authFail(x)}}
-async function adminAction(button){let action=button.dataset.admin,id=button.dataset.id,value=button.dataset.value==='true';let destructive=action.startsWith('delete');if(destructive&&!confirm('This action is permanent. Continue?'))return;try{if(action==='feature')await StoryAPI.adminUpdate('stories',id,{is_featured:value});else if(action==='delete-story')await StoryAPI.adminDelete('stories',id);else if(action==='role')await StoryAPI.adminSetUser(id,button.dataset.value,null);else if(action==='suspend')await StoryAPI.adminSetUser(id,null,value);else if(action==='delete-user')await StoryAPI.adminDeleteUser(id);else if(action==='hide-comment')await StoryAPI.adminUpdate('comments',id,{is_hidden:value});else if(action==='delete-comment')await StoryAPI.adminDelete('comments',id);else if(action==='resolve')await StoryAPI.adminUpdate('reports',id,{status:'resolved'});toast('Admin change saved');route()}catch(e){authFail(e)}}
-async function handleAuth(e){e.preventDefault();try{if(location.hash.includes('signup')){let d=await StoryAPI.signUp($('#authEmail').value,$('#authPassword').value,$('#authName').value);toast(d.session?'Account created':'Verify your email')}else await StoryAPI.signIn($('#authEmail').value,$('#authPassword').value);session=await StoryAPI.session();location.hash='home'}catch(x){authFail(x)}}
-async function filter(){stories=await StoryAPI.stories({category:$('#category').value,query:$('#exploreSearch').value,sort:$('#sort').value});$('#storyGrid').innerHTML=stories.length?stories.map(card).join(''):empty('No matches','Try another search.');bind()}async function more(){let x=await StoryAPI.stories({from:stories.length,to:stories.length+11});stories.push(...x);$('#storyGrid').insertAdjacentHTML('beforeend',x.map(card).join(''));if(x.length<12)$('#more').hidden=true;bind()}async function refresh(){[categories,stories]=await Promise.all([StoryAPI.categories(),StoryAPI.stories()])}
-function authFail(e){console.error(e);let message=/provider is not enabled/i.test(e.message||'')?'That social login is not enabled yet. Use email and password for now.':e.message;toast(message);if(/sign in/i.test(e.message||''))setTimeout(()=>location.hash='auth/signin',500)}function fail(e){console.error(e);$('#app').innerHTML=`<div class="page auth-wrap">${empty('Something went wrong',e.message)}</div>`}function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}}let toastTimer;function toast(x){$('#toast').textContent=x;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),3200)}
-const overlay=$('#search');$('#searchBtn').onclick=()=>{overlay.classList.add('open');$('#searchInput').focus()};$('#searchInput').oninput=debounce(async e=>{let x=await StoryAPI.stories({query:e.target.value,to:4});$('#results').innerHTML=x.map(s=>`<a class="result" href="#story/${s.slug}"><img src="${img(s)}"><span><b>${esc(s.title)}</b><small>${esc(s.author)}</small></span></a>`).join('')},250);overlay.onclick=e=>e.target===overlay&&overlay.classList.remove('open');$('#bell').onclick=async()=>{if(!session)return location.hash='auth/signin';$('#notifications').classList.toggle('open');let x=await StoryAPI.notifications();$('#notificationList').innerHTML=x.length?x.map(n=>`<div class="notice"><span class="avatar">${esc(n.actor?.display_name?.[0]||'S')}</span><p><b>${esc(n.message||n.kind)}</b><small>${new Date(n.created_at).toLocaleString()}</small></p></div>`).join(''):empty('All caught up','No notifications.')};$('#markRead').onclick=async()=>{try{await StoryAPI.markNotificationsRead();toast('Notifications marked read')}catch(e){authFail(e)}};$('#theme').onclick=()=>{document.body.classList.toggle('light');localStorage.theme=document.body.classList.contains('light')?'light':'dark'};if(localStorage.theme==='light')document.body.classList.add('light');document.addEventListener('keydown',e=>{if(e.key==='Escape')overlay.classList.remove('open');if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();$('.saveDraft')?.click()}});addEventListener('hashchange',route);addEventListener('scroll',()=>{$('#header').classList.toggle('scrolled',scrollY>30);let d=document.documentElement;$('#progress').style.width=`${scrollY/(d.scrollHeight-d.clientHeight)*100}%`;if(currentStory&&location.hash.startsWith('#story/'))StoryAPI.markRead(currentStory.id,Math.min(100,Math.round(scrollY/(d.scrollHeight-d.clientHeight)*100)))},{passive:true});
-(async()=>{if(StoryAPI.configured){session=await StoryAPI.session();await refresh();adminMode=session?await StoryAPI.isAdmin():false;StoryAPI.onAuthChange(async(s,event)=>{session=s;adminMode=s?await StoryAPI.isAdmin():false;if(event==='PASSWORD_RECOVERY')location.hash='reset-password'})}route()})();
+const $ = (selector, scope = document) => scope.querySelector(selector);
+const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
+
+let stories = [];
+let categories = [];
+let session = null;
+let currentStory = null;
+let draftId = null;
+let editingStory = null;
+let browseState = { category: '', query: '', sort: 'latest' };
+let timer = null;
+let adminMode = false;
+
+const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;'
+}[ch]));
+
+const stripHtml = value => String(value ?? '').replace(/<[^>]*>/g, ' ');
+const words = value => String(value ?? '').trim().split(/\s+/).filter(Boolean).length;
+const img = story => esc(story?.cover || 'assets/hero.png');
+
+const titleFromFilename = name => {
+  const base = String(name || '').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return base ? base.replace(/\b\w/g, c => c.toUpperCase()) : 'Untitled Story';
+};
+
+const htmlFromText = text => String(text ?? '')
+  .replace(/\r\n/g, '\n')
+  .trim()
+  .split(/\n{2,}/)
+  .filter(Boolean)
+  .map(block => `<p>${esc(block).replace(/\n/g, '<br>')}</p>`)
+  .join('');
+
+const textImportMeta = (text, fileName) => {
+  const cleaned = String(text ?? '').replace(/\r\n/g, '\n').trim();
+  if (!cleaned) return { title: titleFromFilename(fileName), subtitle: '', content: '<p></p>' };
+
+  const blocks = cleaned.split(/\n{2,}/).map(part => part.trim()).filter(Boolean);
+  const first = blocks[0] || '';
+  const subtitle = first.length <= 140 && blocks.length > 1 ? first : '';
+  const body = subtitle ? blocks.slice(1) : blocks;
+
+  return {
+    title: titleFromFilename(fileName),
+    subtitle,
+    content: body.length ? body.map(block => `<p>${esc(block).replace(/\n/g, '<br>')}</p>`).join('') : '<p></p>',
+  };
+};
+
+const editorWordCount = (title, subtitle, content) => words([title, subtitle, stripHtml(content)].filter(Boolean).join(' '));
+
+const sanitizeStoryHtml = html => DOMPurify.sanitize(html || '<p></p>', {
+  USE_PROFILES: { html: true },
+  FORBID_TAGS: ['style', 'form', 'input', 'button', 'iframe'],
+});
+
+function editorPreview() {
+  const box = $('#storyPreview');
+  if (!box) return;
+
+  const title = $('#storyTitle')?.value.trim() || 'Untitled Story';
+  const subtitle = $('#storySubtitle')?.value.trim();
+  const content = sanitizeStoryHtml($('#storyContent')?.innerHTML || '<p></p>');
+  const tags = ($('#storyTags')?.value || '')
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+
+  box.innerHTML = `
+    <div class="preview-shell">
+      <span class="eyebrow">Live preview</span>
+      <h2>${esc(title)}</h2>
+      ${subtitle ? `<p class="preview-subtitle">${esc(subtitle)}</p>` : ''}
+      <div class="preview-copy">${content}</div>
+      ${tags.length ? `<div class="chips preview-tags">${tags.map(tag => `<span class="chip">${esc(tag)}</span>`).join('')}</div>` : ''}
+    </div>
+  `;
+}
+
+function editorStats() {
+  const meta = $('#editorStats');
+  if (!meta) return;
+
+  const title = $('#storyTitle')?.value.trim() || '';
+  const subtitle = $('#storySubtitle')?.value.trim() || '';
+  const body = $('#storyContent')?.innerText || '';
+  const count = editorWordCount(title, subtitle, body);
+  meta.textContent = `${count.toLocaleString()} words · ${Math.max(1, Math.ceil(count / 220))} min read`;
+  editorPreview();
+}
+
+async function importTxtStory(file) {
+  if (!file) return;
+  const text = await file.text();
+  const data = textImportMeta(text, file.name);
+
+  if ($('#storyTitle') && !$('#storyTitle').value.trim()) $('#storyTitle').value = data.title;
+  if ($('#storySubtitle') && !$('#storySubtitle').value.trim() && data.subtitle) $('#storySubtitle').value = data.subtitle;
+  if ($('#storyContent')) $('#storyContent').innerHTML = data.content;
+
+  $('#saveState') && ($('#saveState').textContent = 'Unsaved');
+  editorStats();
+  toast(`Imported ${file.name}`);
+}
+
+const card = story => `
+  <article class="story reveal">
+    <div class="cover">
+      <img src="${img(story)}" loading="lazy" alt="">
+      <span class="pill">${esc(story.cat)}</span>
+      <button class="save" data-id="${story.id}" aria-label="Bookmark">Bookmark</button>
+    </div>
+    <h3><a href="#story/${encodeURIComponent(story.slug)}">${esc(story.title)}</a></h3>
+    <p>${esc(story.desc)}</p>
+    <div class="between meta">
+      <span class="author"><i class="avatar peach">${esc(story.ini)}</i>${esc(story.author)}</span>
+      <span>${esc(story.time)} · Like ${story.likes}</span>
+    </div>
+  </article>
+`;
+
+const empty = (title, body) => `
+  <div class="empty">
+    <h3>${esc(title)}</h3>
+    <p>${esc(body)}</p>
+  </div>
+`;
+
+const footer = () => `
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a>
+          <p>A quiet place for loud ideas, human truths, and stories that stay with you.</p>
+        </div>
+        <div>
+          <h5>DISCOVER</h5>
+          <a href="#explore">Explore</a>
+          <a href="#explore">Trending</a>
+        </div>
+        <div>
+          <h5>CREATE</h5>
+          <a href="#write">Write</a>
+          <a href="#profile">Profile</a>
+        </div>
+        <div>
+          <h5>ACCOUNT</h5>
+          <a href="#auth/signin">${session ? 'Account' : 'Sign in'}</a>
+          ${adminMode ? '<a href="#admin">Admin console</a>' : ''}
+          <a href="#privacy">Privacy</a>
+          <a href="#terms">Terms</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+`;
+
+function setup() {
+  return `
+    <div class="page auth-wrap">
+      <div class="auth-card">
+        <a class="brand"><b>S</b><span>STORYTELLER</span></a>
+        <span class="eyebrow">One secure step left</span>
+        <h1>Connect the live database.</h1>
+        <p>Add the project publishable key to <code>js/config.js</code>, then run the migration from <code>supabase/migrations</code> in the SQL Editor.</p>
+        <a class="btn primary" target="_blank" rel="noreferrer" href="https://supabase.com/dashboard/project/syemkwyfefzdmogtsvmi/settings/api">Open API settings</a>
+      </div>
+    </div>
+  `;
+}
+
+function home() {
+  const featured = stories.find(story => story.featured) || stories[0];
+  const recent = stories.slice(0, 6);
+  const trending = stories.slice(0, 5);
+
+  return `
+    <div class="page">
+      <div class="hero">
+        <div class="hero-bg" ${featured ? `style="background-image:linear-gradient(90deg,#050505f5,#050505a6 48%,transparent 78%),linear-gradient(0deg,var(--bg),transparent 30%),url('${img(featured)}')"` : ''}></div>
+        <div class="container">
+          <div class="hero-copy">
+            <span class="eyebrow">Stories that stay</span>
+            <h1>Every Story<br>Deserves to Be <em>Told.</em></h1>
+            <p>A home for honest voices, untold worlds, and the beautiful mess of being human.</p>
+            <div class="buttons">
+              <a class="btn primary" href="${featured ? '#explore' : '#write'}">${featured ? 'Start reading' : 'Write the first story'} -></a>
+              <a class="btn" href="#write">Write your story</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${featured ? `
+        <section>
+          <div class="container">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Editor's choice</span>
+                <h2>Featured this week</h2>
+              </div>
+            </div>
+            <div class="featured">
+              <a class="feature-card" style="background-image:linear-gradient(0deg,#000e,transparent 70%),url('${img(featured)}')" href="#story/${featured.slug}">
+                <div>
+                  <span class="eyebrow">${esc(featured.cat)} · ${esc(featured.time)}</span>
+                  <h2>${esc(featured.title)}</h2>
+                  <p>${esc(featured.desc)}</p>
+                  <span class="author"><i class="avatar peach">${esc(featured.ini)}</i>${esc(featured.author)}</span>
+                </div>
+              </a>
+              <div class="ranks">
+                ${trending.slice(1, 5).map((story, index) => `
+                  <a class="rank" href="#story/${story.slug}">
+                    <strong>0${index + 1}</strong>
+                    <div>
+                      <h3>${esc(story.title)}</h3>
+                      <small>${esc(story.author)} · ${esc(story.time)}</small>
+                    </div>
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </section>
+        <section>
+          <div class="container">
+            <div class="section-head">
+              <div>
+                <span class="eyebrow">Fresh perspectives</span>
+                <h2>Recently published</h2>
+              </div>
+            </div>
+            <div class="grid">${recent.map(card).join('')}</div>
+          </div>
+        </section>
+      ` : ''}
+
+      <section>
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Find your next read</span>
+              <h2>Explore categories</h2>
+            </div>
+          </div>
+          <div class="chips">${categories.map(category => `<a class="chip" href="#explore">${esc(category.name)}</a>`).join('')}</div>
+        </div>
+      </section>
+
+      ${footer()}
+    </div>
+  `;
+}
+
+function explore() {
+  return `
+    <div class="page">
+      <div class="explore-head container">
+        <span class="eyebrow">The story archive</span>
+        <h1 class="page-title">Explore worlds<br>worth entering.</h1>
+      </div>
+      <div class="tools">
+        <div class="container toolrow">
+          <label>Search<input id="exploreSearch" placeholder="Search stories"></label>
+          <select id="category">
+            <option value="">All categories</option>
+            ${categories.map(category => `<option value="${category.id}">${esc(category.name)}</option>`).join('')}
+          </select>
+          <select id="sort">
+            <option value="latest">Latest</option>
+            <option value="views">Most Viewed</option>
+            <option value="liked">Most Liked</option>
+          </select>
+        </div>
+      </div>
+      <section>
+        <div class="container">
+          <div class="grid" id="storyGrid">${stories.length ? stories.slice(0, 12).map(card).join('') : empty('No stories yet', 'Publish the first story.')}</div>
+          <button id="more" class="btn load-more">Load more</button>
+        </div>
+      </section>
+      ${footer()}
+    </div>
+  `;
+}
+
+function reader(story) {
+  if (!story) return `<div class="page auth-wrap">${empty('Story not found', 'It may have been removed.')}</div>`;
+
+  const content = sanitizeStoryHtml(story.content || '');
+  const index = stories.findIndex(item => item.slug === story.slug);
+  const prev = index > 0 ? stories[index - 1] : null;
+  const next = index >= 0 && index < stories.length - 1 ? stories[index + 1] : null;
+  const related = stories
+    .filter(item => item.id !== story.id && (item.categoryId === story.categoryId || item.tags.some(tag => (story.tags || []).includes(tag))))
+    .slice(0, 3);
+
+  return `
+    <article class="page reader">
+      <header class="reader-head">
+        <span class="eyebrow">${esc(story.cat)}</span>
+        <h1>${esc(story.title)}</h1>
+        <p class="subtitle">${esc(story.desc)}</p>
+        <div class="byline">
+          <span class="avatar peach">${esc(story.ini)}</span>
+          <div>
+            <b>${esc(story.author)}</b>
+            <div class="meta">${esc(story.date)} · ${esc(story.time)} · ${story.views} views</div>
+          </div>
+          <div class="author-actions">
+            <button class="btn followAuthor" data-id="${story.authorId}">Follow</button>
+            <button class="btn reportStory">Report</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="reader-tools">
+        <button class="like" data-id="${story.id}">Like</button>
+        <button class="bookmark" data-id="${story.id}">Bookmark</button>
+        <button id="font">Aa</button>
+        <button id="readerMode">Mode</button>
+        <button class="share">Share</button>
+      </div>
+
+      <div class="reader-cover">
+        <img src="${img(story)}" alt="">
+      </div>
+
+      <div class="reader-body">${content}
+        <div class="reader-end">
+          <span class="eyebrow">The end</span>
+          <h2>Did this story move you?</h2>
+          <button class="btn primary like" data-id="${story.id}">Appreciate · ${story.likes}</button>
+          <div class="story-nav">
+            ${prev ? `<a class="btn" href="#story/${prev.slug}">Previous story</a>` : '<span class="btn disabled">Previous story</span>'}
+            ${next ? `<a class="btn" href="#story/${next.slug}">Next story</a>` : '<span class="btn disabled">Next story</span>'}
+          </div>
+        </div>
+      </div>
+
+      <div class="related-stories">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Related reading</span>
+            <h2>More stories to explore</h2>
+          </div>
+        </div>
+        <div class="grid">
+          ${related.length ? related.map(card).join('') : empty('No related stories yet', 'More matches will appear as the library grows.')}
+        </div>
+      </div>
+
+      <div class="comments">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Conversation</span>
+            <h2>Comments</h2>
+          </div>
+        </div>
+        <div id="commentList"></div>
+        <textarea id="commentBody" maxlength="2000" placeholder="Leave a thoughtful response..."></textarea>
+        <button class="btn primary" id="comment">Post comment</button>
+      </div>
+    </article>
+  `;
+}
+
+function write(story = null) {
+  if (!session) return auth('signin', 'Sign in to write and publish.');
+
+  editingStory = story;
+  draftId = story?.id || null;
+
+  const initialCount = editorWordCount(story?.title || '', story?.desc || '', story?.content || '');
+  const initialMinutes = Math.max(1, Math.ceil(initialCount / 220));
+  const initialContent = story?.content ? sanitizeStoryHtml(story.content) : '<p>Tell your story...</p>';
+
+  return `
+    <div class="page editor">
+      <div class="editor-top">
+        <div>
+          <span class="eyebrow">${story ? 'Edit story' : 'New story'}</span>
+          <small id="saveState">${story ? 'Saved draft' : 'Draft not saved'}</small>
+          <small id="editorStats">${initialCount.toLocaleString()} words · ${initialMinutes} min read</small>
+        </div>
+        <div class="buttons editor-tools">
+          ${story ? '<button class="btn danger deleteOwnStory">Delete</button>' : ''}
+          <button class="btn" id="previewToggle" type="button">Preview</button>
+          <button class="btn" id="importTxt" type="button">Import .txt</button>
+          <input id="storyTxt" type="file" accept=".txt,text/plain" hidden>
+          <button class="btn saveDraft" type="button">Save draft</button>
+          <button class="btn primary publish" type="button">Publish</button>
+        </div>
+      </div>
+      <p class="editor-note">Upload a plain text story file, refine the layout below, and publish when it is ready.</p>
+      <input class="title-input" id="storyTitle" maxlength="160" value="${esc(story?.title || '')}" placeholder="Your story begins with a title...">
+      <input class="subtitle-input" id="storySubtitle" maxlength="300" value="${esc(story?.desc || '')}" placeholder="Add a compelling subtitle">
+      <div class="editor-bar">
+        <button data-cmd="bold"><b>B</b></button>
+        <button data-cmd="italic"><i>I</i></button>
+        <button data-cmd="formatBlock">Quote</button>
+        <button data-cmd="insertUnorderedList">List</button>
+      </div>
+      <div class="editor-stack">
+        <div class="editor-area" id="storyContent" contenteditable="true">${initialContent}</div>
+        <div class="editor-preview" id="storyPreview" aria-live="polite"></div>
+      </div>
+      <div class="fields">
+        <div class="field">
+          <label>Category</label>
+          <select id="storyCategory">
+            <option value="">Select category</option>
+            ${categories.map(category => `<option value="${category.id}" ${String(story?.categoryId) === String(category.id) ? 'selected' : ''}>${esc(category.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Tags</label>
+          <input id="storyTags" value="${esc((story?.tags || []).join(', '))}" placeholder="memory, travel, life">
+        </div>
+        <div class="field">
+          <label>Cover image</label>
+          <input id="storyCover" type="file" accept="image/jpeg,image/png,image/webp,image/avif">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function auth(mode = 'signin', msg = '') {
+  const signup = mode === 'signup';
+  return `
+    <div class="page auth-wrap">
+      <form class="auth-card">
+        <a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a>
+        <span class="eyebrow">${signup ? 'Join us' : 'Welcome back'}</span>
+        <h1>${signup ? 'Tell your story.' : 'Continue your story.'}</h1>
+        <p>${esc(msg || 'Read, write, save, and join the conversation.')}</p>
+        <button type="button" class="social" data-provider="google">Continue with Google</button>
+        <button type="button" class="social" data-provider="github">Continue with GitHub</button>
+        <div class="divider">or use email</div>
+        ${signup ? '<div class="field"><label>Display name</label><input id="authName" required maxlength="80"></div>' : ''}
+        <div class="field"><label>Email</label><input id="authEmail" type="email" required></div>
+        <div class="field"><label>Password</label><input id="authPassword" type="password" required minlength="8"></div>
+        <button class="btn primary authSubmit">${signup ? 'Create account' : 'Sign in'}</button>
+        <div class="between">
+          <button type="button" class="meta authMode">${signup ? 'Already registered?' : 'Create account'}</button>
+          <button type="button" class="meta forgot">Forgot password?</button>
+        </div>
+      </form>
+    </div>
+  `;
+}
+
+async function profile(tab = 'published') {
+  const me = await StoryAPI.profile();
+  if (!me) return auth();
+
+  const mine = tab === 'published' ? await StoryAPI.myStories('published') : await StoryAPI.library(tab);
+  const items = mine.map(story => {
+    if (tab === 'drafts') {
+      return `
+        <article class="story">
+          <div class="cover">
+            <img src="${img(story)}" alt="">
+            <span class="pill">Draft</span>
+          </div>
+          <h3>${esc(story.title)}</h3>
+          <p>${esc(story.desc)}</p>
+          <div class="buttons">
+            <a class="btn" href="#write/${story.id}">Continue editing</a>
+          </div>
+        </article>
+      `;
+    }
+    return card(story);
+  }).join('');
+
+  return `
+    <div class="page">
+      <section class="profile-hero">
+        <div class="container profile-layout">
+          <div class="profile-avatar">
+            ${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc(me.display_name.split(/\s+/).map(part => part[0]).slice(0, 2).join(''))}
+          </div>
+          <div>
+            <span class="eyebrow">Writer profile</span>
+            <h1 class="page-title">${esc(me.display_name)}</h1>
+            <p class="subtitle">${esc(me.bio || 'Your story is still being written.')}</p>
+            <p class="meta">@${esc(me.username)} · ${esc(me.role)}</p>
+            <div class="buttons">
+              <button class="btn editProfile">Edit profile</button>
+              ${adminMode ? '<a class="btn" href="#admin">Admin console</a>' : ''}
+              <button class="btn signOut">Sign out</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="profile-editor container" hidden>
+        <div class="field"><label>Display name</label><input id="profileName" maxlength="80" value="${esc(me.display_name)}"></div>
+        <div class="field"><label>Username</label><input id="profileUsername" maxlength="30" value="${esc(me.username)}"></div>
+        <div class="field"><label>Bio</label><textarea id="profileBio" maxlength="500">${esc(me.bio)}</textarea></div>
+        <div class="field"><label>Avatar</label><input id="profileAvatar" type="file" accept="image/jpeg,image/png,image/webp"></div>
+        <button class="btn primary saveProfile">Save profile</button>
+      </div>
+
+      <section>
+        <div class="container">
+          <div class="chips profile-tabs">
+            ${[['published', 'Published'], ['drafts', 'Drafts'], ['liked', 'Liked'], ['bookmarks', 'Bookmarks'], ['history', 'History']]
+              .map(item => `<a class="chip ${tab === item[0] ? 'active' : ''}" href="#profile/${item[0]}">${item[1]}</a>`).join('')}
+          </div>
+          <div class="grid profile-grid">${items || empty('Nothing here yet', tab === 'drafts' ? 'Your saved drafts appear here.' : 'Your library will grow as you read.')}</div>
+        </div>
+      </section>
+      ${footer()}
+    </div>
+  `;
+}
+
+function resetPassword() {
+  return `
+    <div class="page auth-wrap">
+      <form class="auth-card resetForm">
+        <a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a>
+        <span class="eyebrow">Secure your account</span>
+        <h1>Choose a new password.</h1>
+        <p>Use at least eight characters and avoid reusing an old password.</p>
+        <div class="field"><label>New password</label><input id="newPassword" type="password" minlength="8" required></div>
+        <div class="field"><label>Confirm password</label><input id="confirmPassword" type="password" minlength="8" required></div>
+        <button class="btn primary">Update password</button>
+      </form>
+    </div>
+  `;
+}
+
+function legal(kind) {
+  const privacy = kind === 'privacy';
+  return `
+    <div class="page legal">
+      <div class="legal-copy">
+        <a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a>
+        <span class="eyebrow">${privacy ? 'Privacy' : 'Terms'}</span>
+        <h1>${privacy ? 'Your stories. Your data.' : 'A thoughtful community.'}</h1>
+        <p>Last updated July 21, 2026</p>
+        ${privacy ? `
+          <h2>What we collect</h2>
+          <p>We store account details, profile information, stories, comments, reactions, bookmarks and reading history needed to operate STORYTELLER. Google sign-in supplies your basic profile and email; we do not receive your Google password.</p>
+          <h2>How we use information</h2>
+          <p>Information is used to authenticate you, publish your work, personalize your library, moderate the community and secure the service. We do not sell personal information.</p>
+          <h2>Your choices</h2>
+          <p>You may edit your profile and delete your content. Contact the site administrator to request complete account deletion.</p>
+          <h2>Service providers</h2>
+          <p>Supabase provides authentication, database and storage infrastructure. GitHub Pages hosts the website.</p>
+        ` : `
+          <h2>Publish responsibly</h2>
+          <p>You retain ownership of your writing and grant STORYTELLER permission to display content you publish. Do not post illegal, abusive, plagiarized or privacy-violating material.</p>
+          <h2>Moderation</h2>
+          <p>Administrators may hide or remove content, suspend accounts and act on reports to protect the community.</p>
+          <h2>Accounts</h2>
+          <p>Keep your account secure and provide accurate information. You are responsible for activity performed through your account.</p>
+          <h2>Availability</h2>
+          <p>The service may change as it develops. We aim for reliability but cannot guarantee uninterrupted availability.</p>
+        `}
+        <p>Questions can be directed to the project administrator.</p>
+      </div>
+      ${footer()}
+    </div>
+  `;
+}
+
+async function admin() {
+  if (!adminMode) return `<div class="page auth-wrap">${empty('Access denied', 'This area is reserved for administrators.')}</div>`;
+
+  const [metrics, storiesData, commentsData, usersData, reportsData] = await Promise.all([
+    StoryAPI.adminMetrics(),
+    StoryAPI.adminStories(),
+    StoryAPI.adminComments(),
+    StoryAPI.adminUsers(),
+    StoryAPI.adminReports(),
+  ]);
+
+  const storyRows = storiesData.map(story => `
+    <div class="control-row">
+      <div>
+        <b>${esc(story.title)}</b>
+        <small>${esc(story.profiles?.display_name)} · ${esc(story.status)} · ${story.view_count} views</small>
+      </div>
+      <div class="row-actions">
+        <button data-admin="feature" data-id="${story.id}" data-value="${!story.is_featured}">${story.is_featured ? 'Unfeature' : 'Feature'}</button>
+        <button class="danger" data-admin="delete-story" data-id="${story.id}">Delete</button>
+      </div>
+    </div>
+  `).join('');
+
+  const userRows = usersData.map(user => `
+    <div class="control-row">
+      <div>
+        <b>${esc(user.display_name)}</b>
+        <small>@${esc(user.username)} · ${esc(user.role)}</small>
+      </div>
+      <div class="row-actions">
+        <button data-admin="role" data-id="${user.id}" data-value="${user.role === 'admin' ? 'writer' : 'admin'}">Make ${user.role === 'admin' ? 'writer' : 'admin'}</button>
+        <button data-admin="suspend" data-id="${user.id}" data-value="${!user.is_suspended}">${user.is_suspended ? 'Restore' : 'Suspend'}</button>
+        <button class="danger" data-admin="delete-user" data-id="${user.id}">Delete</button>
+      </div>
+    </div>
+  `).join('');
+
+  const commentRows = commentsData.map(comment => `
+    <div class="control-row">
+      <div>
+        <b>${esc(comment.profiles?.display_name)} on ${esc(comment.stories?.title)}</b>
+        <small>${esc(comment.body)}</small>
+      </div>
+      <div class="row-actions">
+        <button data-admin="hide-comment" data-id="${comment.id}" data-value="${!comment.is_hidden}">${comment.is_hidden ? 'Show' : 'Hide'}</button>
+        <button class="danger" data-admin="delete-comment" data-id="${comment.id}">Delete</button>
+      </div>
+    </div>
+  `).join('');
+
+  const reportRows = reportsData.map(report => `
+    <div class="control-row">
+      <div>
+        <b>${esc(report.reason)}</b>
+        <small>${esc(report.profiles?.display_name)} · ${esc(report.status)}</small>
+      </div>
+      <button data-admin="resolve" data-id="${report.id}">Resolve</button>
+    </div>
+  `).join('');
+
+  return `
+    <div class="page admin-shell">
+      <aside class="admin-side">
+        <a class="brand" href="#home"><b>S</b><span>STORYTELLER</span></a>
+        <span class="eyebrow">Control room</span>
+        <a href="#admin">Overview</a>
+        <a href="#admin-stories">Stories</a>
+        <a href="#admin-users">Users</a>
+        <a href="#admin-comments">Comments</a>
+        <a href="#admin-reports">Reports</a>
+        <button class="btn signOut">Sign out</button>
+      </aside>
+      <main class="admin-content">
+        <div class="admin-title">
+          <div>
+            <span class="eyebrow">Live operations</span>
+            <h1>Editorial control.</h1>
+          </div>
+          <span class="live-badge">Live</span>
+        </div>
+        <div class="metric-grid">
+          <div><small>Readers</small><b>${metrics.users || 0}</b></div>
+          <div><small>Stories</small><b>${metrics.stories || 0}</b></div>
+          <div><small>Total views</small><b>${metrics.views || 0}</b></div>
+          <div><small>Open reports</small><b>${metrics.open_reports || 0}</b></div>
+        </div>
+        <section class="admin-section" id="admin-stories">
+          <div class="between"><h2>Stories</h2><span>${storiesData.length} records</span></div>
+          ${storyRows || empty('No stories', 'Published and draft stories appear here.')}
+        </section>
+        <section class="admin-section" id="admin-users">
+          <div class="between"><h2>People</h2><span>${usersData.length} accounts</span></div>
+          ${userRows}
+        </section>
+        <section class="admin-section" id="admin-comments">
+          <div class="between"><h2>Comments</h2><span>${commentsData.length} responses</span></div>
+          ${commentRows || empty('No comments', 'Community responses appear here.')}
+        </section>
+        <section class="admin-section" id="admin-reports">
+          <div class="between"><h2>Reports</h2><span>${reportsData.length} reports</span></div>
+          ${reportRows || empty('No reports', 'Your community is clear.')}
+        </section>
+      </main>
+    </div>
+  `;
+}
+
+async function route() {
+  if (!StoryAPI.configured) {
+    $('#app').innerHTML = setup();
+    return;
+  }
+
+  const [page, arg] = (location.hash.slice(1) || 'home').split('/');
+  $('#app').innerHTML = '<div class="page auth-wrap"><div class="loader"></div></div>';
+
+  try {
+    if (page === 'story') {
+      currentStory = await StoryAPI.story(decodeURIComponent(arg || ''));
+      await StoryAPI.view(currentStory.id);
+      $('#app').innerHTML = reader(currentStory);
+    } else if (page === 'profile') {
+      $('#app').innerHTML = await profile(arg || 'published');
+    } else if (page === 'admin' || page.startsWith('admin-')) {
+      $('#app').innerHTML = await admin();
+    } else if (page === 'write') {
+      $('#app').innerHTML = write(arg ? await StoryAPI.storyById(arg) : null);
+    } else if (page === 'auth') {
+      $('#app').innerHTML = auth(arg);
+    } else if (page === 'reset-password') {
+      $('#app').innerHTML = resetPassword();
+    } else if (page === 'privacy' || page === 'terms') {
+      $('#app').innerHTML = legal(page);
+    } else {
+      $('#app').innerHTML = home();
+    }
+
+    scrollTo(0, 0);
+    bind();
+
+    if (page === 'story') {
+      loadComments();
+      StoryAPI.markRead(currentStory.id, 10);
+    }
+
+    if (page.startsWith('admin-')) {
+      setTimeout(() => document.getElementById(page)?.scrollIntoView({ behavior: 'smooth' }), 50);
+    }
+  } catch (error) {
+    fail(error);
+  }
+}
+
+async function saveStory(publish) {
+  const title = $('#storyTitle').value.trim();
+  if (title.length < 3) throw Error('Add a title with at least 3 characters');
+
+  let cover = editingStory?.cover || null;
+  const file = $('#storyCover').files[0];
+  if (file) cover = await StoryAPI.uploadCover(file);
+
+  const payload = {
+    id: draftId,
+    title,
+    subtitle: $('#storySubtitle').value,
+    content: $('#storyContent').innerHTML,
+    category: $('#storyCategory').value,
+    tags: $('#storyTags').value.split(',').map(tag => tag.trim()).filter(Boolean),
+    cover,
+  };
+
+  const record = await StoryAPI.saveStory(payload, publish);
+  draftId = record.id;
+  editingStory = { ...(editingStory || {}), ...record, cover };
+
+  $('#saveState').textContent = publish ? 'Published' : 'Draft saved';
+  toast(publish ? 'Story published' : 'Draft saved');
+
+  if (publish) {
+    await refresh();
+    location.hash = `story/${record.slug}`;
+  } else {
+    editorStats();
+  }
+}
+
+async function loadComments() {
+  const rows = await StoryAPI.comments(currentStory.id);
+  $('#commentList').innerHTML = rows.length
+    ? rows.map(comment => `
+        <div class="notice">
+          <span class="avatar">${esc(comment.profiles.display_name[0])}</span>
+          <p>
+            <b>${esc(comment.profiles.display_name)}</b>
+            <small>${new Date(comment.created_at).toLocaleDateString()}</small>
+            <span>${esc(comment.body)}</span>
+          </p>
+        </div>
+      `).join('')
+    : empty('No comments yet', 'Start the conversation.');
+}
+
+function bind() {
+  $$('.save,.bookmark').forEach(button => {
+    button.onclick = async event => {
+      event.preventDefault();
+      try {
+        toast(await StoryAPI.toggle('bookmarks', button.dataset.id) ? 'Saved' : 'Bookmark removed');
+      } catch (error) {
+        authFail(error);
+      }
+    };
+  });
+
+  $$('.like').forEach(button => {
+    button.onclick = async () => {
+      try {
+        toast(await StoryAPI.toggle('likes', button.dataset.id) ? 'Story appreciated' : 'Like removed');
+      } catch (error) {
+        authFail(error);
+      }
+    };
+  });
+
+  $('#comment')?.addEventListener('click', async () => {
+    try {
+      const body = $('#commentBody').value.trim();
+      if (body) {
+        await StoryAPI.comment(currentStory.id, body);
+        $('#commentBody').value = '';
+        await loadComments();
+      }
+    } catch (error) {
+      authFail(error);
+    }
+  });
+
+  $('.followAuthor')?.addEventListener('click', async event => {
+    try {
+      const following = await StoryAPI.follow(event.currentTarget.dataset.id);
+      event.currentTarget.textContent = following ? 'Following' : 'Follow';
+      toast(following ? 'Author followed' : 'Author unfollowed');
+    } catch (error) {
+      authFail(error);
+    }
+  });
+
+  $('.reportStory')?.addEventListener('click', async () => {
+    const reason = prompt('Why are you reporting this story?');
+    if (reason?.trim().length >= 5) {
+      try {
+        await StoryAPI.reportStory(currentStory.id, reason.trim());
+        toast('Report sent to moderators');
+      } catch (error) {
+        authFail(error);
+      }
+    }
+  });
+
+  $('#category')?.addEventListener('change', filter);
+  $('#sort')?.addEventListener('change', filter);
+  $('#exploreSearch')?.addEventListener('input', debounce(filter, 300));
+  $('#more')?.addEventListener('click', more);
+
+  $$('.editor-bar [data-cmd]').forEach(button => {
+    button.onclick = () => document.execCommand(button.dataset.cmd, false, button.dataset.cmd === 'formatBlock' ? 'blockquote' : null);
+  });
+
+  $$('#storyTitle,#storySubtitle,#storyTags,#storyContent').forEach(node => {
+    node?.addEventListener('input', () => {
+      clearTimeout(timer);
+      if ($('#saveState')) $('#saveState').textContent = 'Unsaved';
+      editorStats();
+      if ($('#storyContent')) {
+        timer = setTimeout(() => saveStory(false).catch(error => {
+          if ($('#saveState')) $('#saveState').textContent = error.message;
+        }), 1500);
+      }
+    });
+  });
+
+  $('#storyContent')?.addEventListener('paste', event => {
+    if (event.clipboardData?.types?.includes('text/plain')) {
+      event.preventDefault();
+      document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
+    }
+  });
+
+  $('#storyContent')?.addEventListener('dragover', event => event.preventDefault());
+  $('#storyContent')?.addEventListener('drop', async event => {
+    const file = [...(event.dataTransfer?.files || [])].find(item => /\.txt$/i.test(item.name) || item.type === 'text/plain');
+    if (!file) return;
+    event.preventDefault();
+    await importTxtStory(file);
+  });
+
+  $('#previewToggle')?.addEventListener('click', () => {
+    const editor = $('.editor');
+    if (!editor) return;
+    editor.classList.toggle('previewing');
+    $('#previewToggle').textContent = editor.classList.contains('previewing') ? 'Edit' : 'Preview';
+    editorStats();
+  });
+
+  $('#importTxt')?.addEventListener('click', () => $('#storyTxt')?.click());
+  $('#storyTxt')?.addEventListener('change', async event => {
+    const file = event.target.files?.[0];
+    if (file) await importTxtStory(file);
+    event.target.value = '';
+  });
+
+  $('.saveDraft')?.addEventListener('click', () => saveStory(false).catch(authFail));
+  $('.publish')?.addEventListener('click', () => saveStory(true).catch(authFail));
+  $('.deleteOwnStory')?.addEventListener('click', async () => {
+    if (confirm('Delete this story permanently?')) {
+      try {
+        await StoryAPI.deleteMyStory(draftId);
+        toast('Story deleted');
+        location.hash = 'profile/drafts';
+      } catch (error) {
+        authFail(error);
+      }
+    }
+  });
+
+  $('#font')?.addEventListener('click', () => $('.reader-body')?.classList.toggle('reader-large'));
+  $('#readerMode')?.addEventListener('click', () => toggleTheme());
+  $('.share')?.addEventListener('click', () => {
+    if (navigator.share) navigator.share({ title: currentStory.title, url: location.href });
+    else navigator.clipboard.writeText(location.href).then(() => toast('Link copied'));
+  });
+
+  $('.auth-card:not(.resetForm)')?.addEventListener('submit', handleAuth);
+  $('.resetForm')?.addEventListener('submit', handlePasswordReset);
+  $$('.social').forEach(button => button.onclick = () => StoryAPI.social(button.dataset.provider).catch(authFail));
+  $('.authMode')?.addEventListener('click', () => location.hash = location.hash.includes('signup') ? 'auth/signin' : 'auth/signup');
+  $('.forgot')?.addEventListener('click', async () => {
+    const email = $('#authEmail').value;
+    if (!email) return toast('Enter your email');
+    try {
+      await StoryAPI.resetPassword(email);
+      toast('Check your email');
+    } catch (error) {
+      authFail(error);
+    }
+  });
+
+  $('.editProfile')?.addEventListener('click', () => { $('.profile-editor').hidden = !$('.profile-editor').hidden; });
+  $('.saveProfile')?.addEventListener('click', saveProfile);
+  $('.signOut')?.addEventListener('click', async () => {
+    await StoryAPI.signOut();
+    location.hash = 'home';
+  });
+
+  $$('[data-admin]').forEach(button => button.onclick = () => adminAction(button));
+  editorStats();
+}
+
+async function handlePasswordReset(event) {
+  event.preventDefault();
+  const newPassword = $('#newPassword').value;
+  const confirmPassword = $('#confirmPassword').value;
+  if (newPassword !== confirmPassword) return toast('Passwords do not match');
+
+  try {
+    await StoryAPI.updatePassword(newPassword);
+    toast('Password updated');
+    location.hash = 'profile';
+  } catch (error) {
+    authFail(error);
+  }
+}
+
+async function saveProfile() {
+  try {
+    let avatar = null;
+    const file = $('#profileAvatar').files[0];
+    if (file) avatar = await StoryAPI.uploadAvatar(file);
+
+    await StoryAPI.updateProfile({
+      display_name: $('#profileName').value.trim(),
+      username: $('#profileUsername').value.trim().toLowerCase(),
+      bio: $('#profileBio').value.trim(),
+      ...(avatar && { avatar_url: avatar }),
+    });
+
+    toast('Profile updated');
+    route();
+  } catch (error) {
+    authFail(error);
+  }
+}
+
+async function adminAction(button) {
+  const action = button.dataset.admin;
+  const id = button.dataset.id;
+  const value = button.dataset.value === 'true';
+  const destructive = action.startsWith('delete');
+
+  if (destructive && !confirm('This action is permanent. Continue?')) return;
+
+  try {
+    if (action === 'feature') await StoryAPI.adminUpdate('stories', id, { is_featured: value });
+    else if (action === 'delete-story') await StoryAPI.adminDelete('stories', id);
+    else if (action === 'role') await StoryAPI.adminSetUser(id, button.dataset.value, null);
+    else if (action === 'suspend') await StoryAPI.adminSetUser(id, null, value);
+    else if (action === 'delete-user') await StoryAPI.adminDeleteUser(id);
+    else if (action === 'hide-comment') await StoryAPI.adminUpdate('comments', id, { is_hidden: value });
+    else if (action === 'delete-comment') await StoryAPI.adminDelete('comments', id);
+    else if (action === 'resolve') await StoryAPI.adminUpdate('reports', id, { status: 'resolved' });
+    toast('Admin change saved');
+    route();
+  } catch (error) {
+    authFail(error);
+  }
+}
+
+async function handleAuth(event) {
+  event.preventDefault();
+  try {
+    if (location.hash.includes('signup')) {
+      const data = await StoryAPI.signUp($('#authEmail').value, $('#authPassword').value, $('#authName').value);
+      toast(data.session ? 'Account created' : 'Verify your email');
+    } else {
+      await StoryAPI.signIn($('#authEmail').value, $('#authPassword').value);
+    }
+    session = await StoryAPI.session();
+    location.hash = 'home';
+  } catch (error) {
+    authFail(error);
+  }
+}
+
+async function filter() {
+  browseState = {
+    category: $('#category').value,
+    query: $('#exploreSearch').value.trim(),
+    sort: $('#sort').value,
+  };
+
+  stories = await StoryAPI.stories({ ...browseState, from: 0, to: 11 });
+  $('#storyGrid').innerHTML = stories.length ? stories.map(card).join('') : empty('No matches', 'Try another search.');
+  $('#more') && ($('#more').hidden = stories.length < 12);
+  bind();
+}
+
+async function more() {
+  const extra = await StoryAPI.stories({
+    ...browseState,
+    from: stories.length,
+    to: stories.length + 11,
+  });
+
+  stories.push(...extra);
+  $('#storyGrid').insertAdjacentHTML('beforeend', extra.map(card).join(''));
+  if (extra.length < 12) $('#more').hidden = true;
+  bind();
+}
+
+async function refresh() {
+  [categories, stories] = await Promise.all([
+    StoryAPI.categories(),
+    StoryAPI.stories({ to: 23 }),
+  ]);
+}
+
+function toggleTheme(force) {
+  if (force === 'light') document.body.classList.add('light');
+  else if (force === 'dark') document.body.classList.remove('light');
+  else document.body.classList.toggle('light');
+  localStorage.theme = document.body.classList.contains('light') ? 'light' : 'dark';
+}
+
+function authFail(error) {
+  console.error(error);
+  const message = /provider is not enabled/i.test(error.message || '')
+    ? 'That social login is not enabled yet. Use email and password for now.'
+    : error.message;
+  toast(message);
+  if (/sign in/i.test(error.message || '')) setTimeout(() => { location.hash = 'auth/signin'; }, 500);
+}
+
+function fail(error) {
+  console.error(error);
+  $('#app').innerHTML = `<div class="page auth-wrap">${empty('Something went wrong', error.message)}</div>`;
+}
+
+function debounce(fn, delay) {
+  let id;
+  return (...args) => {
+    clearTimeout(id);
+    id = setTimeout(() => fn(...args), delay);
+  };
+}
+
+let toastTimer = null;
+function toast(message) {
+  const node = $('#toast');
+  if (!node) return;
+  node.textContent = message;
+  node.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => node.classList.remove('show'), 3200);
+}
+
+const overlay = $('#search');
+$('#searchBtn').onclick = () => {
+  overlay.classList.add('open');
+  $('#searchInput').focus();
+};
+
+$('#searchInput').oninput = debounce(async event => {
+  const results = await StoryAPI.stories({ query: event.target.value, to: 4 });
+  $('#results').innerHTML = results.map(story => `
+    <a class="result" href="#story/${story.slug}">
+      <img src="${img(story)}" alt="">
+      <span><b>${esc(story.title)}</b><small>${esc(story.author)}</small></span>
+    </a>
+  `).join('');
+}, 250);
+
+overlay.onclick = event => event.target === overlay && overlay.classList.remove('open');
+
+$('#bell').onclick = async () => {
+  if (!session) return location.hash = 'auth/signin';
+  $('#notifications').classList.toggle('open');
+  const items = await StoryAPI.notifications();
+  $('#notificationList').innerHTML = items.length
+    ? items.map(notification => `
+        <div class="notice">
+          <span class="avatar">${esc(notification.actor?.display_name?.[0] || 'S')}</span>
+          <p>
+            <b>${esc(notification.message || notification.kind)}</b>
+            <small>${new Date(notification.created_at).toLocaleString()}</small>
+          </p>
+        </div>
+      `).join('')
+    : empty('All caught up', 'No notifications.');
+};
+
+$('#markRead').onclick = async () => {
+  try {
+    await StoryAPI.markNotificationsRead();
+    toast('Notifications marked read');
+  } catch (error) {
+    authFail(error);
+  }
+};
+
+$('#theme').onclick = () => toggleTheme();
+if (localStorage.theme === 'light') document.body.classList.add('light');
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') overlay.classList.remove('open');
+  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+    event.preventDefault();
+    $('.saveDraft')?.click();
+  }
+});
+
+addEventListener('hashchange', route);
+addEventListener('scroll', () => {
+  const header = $('#header');
+  header.classList.toggle('scrolled', scrollY > 30);
+
+  const doc = document.documentElement;
+  const total = doc.scrollHeight - doc.clientHeight;
+  $('#progress').style.width = `${total > 0 ? scrollY / total * 100 : 0}%`;
+
+  if (currentStory && location.hash.startsWith('#story/')) {
+    StoryAPI.markRead(currentStory.id, Math.min(100, Math.round(total > 0 ? scrollY / total * 100 : 0)));
+  }
+}, { passive: true });
+
+(async () => {
+  if (StoryAPI.configured) {
+    session = await StoryAPI.session();
+    await refresh();
+    adminMode = session ? await StoryAPI.isAdmin() : false;
+    StoryAPI.onAuthChange(async (nextSession, event) => {
+      session = nextSession;
+      adminMode = nextSession ? await StoryAPI.isAdmin() : false;
+      if (event === 'PASSWORD_RECOVERY') location.hash = 'reset-password';
+      route();
+    });
+  }
+
+  route();
+})();
