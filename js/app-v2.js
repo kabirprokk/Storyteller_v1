@@ -14,6 +14,8 @@ let readTimer = null;
 let filterRequest = 0;
 let heroTimer = null;
 let adminMode = false;
+let likedStoryIds = new Set();
+let bookmarkedStoryIds = new Set();
 const logo = 'assets/storyteller-mark.png';
 const supportEmail = 'kabirsayed.k@gmail.com';
 const gmailComposeUrl = (subject = '', body = '') => {
@@ -21,6 +23,12 @@ const gmailComposeUrl = (subject = '', body = '') => {
   if (subject) parameters.set('su', subject);
   if (body) parameters.set('body', body);
   return `https://mail.google.com/mail/?${parameters}`;
+};
+const openGmail = (subject = '', body = '') => {
+  const url = gmailComposeUrl(subject, body);
+  const gmailWindow = window.open(url, '_blank');
+  if (gmailWindow) gmailWindow.opener = null;
+  else location.assign(url);
 };
 const brand = `<img class="brand-mark" src="${logo}" alt="" aria-hidden="true"><span>STORYTELLER</span>`;
 const icons = {
@@ -30,7 +38,8 @@ const icons = {
   heart: '<svg class="lucide lucide-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /></svg>',
   bookmark: '<svg class="lucide lucide-bookmark" viewBox="0 0 24 24" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" /></svg>',
   share: '<svg class="lucide lucide-arrow-up-right" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7" /><path d="M7 7h10v10" /></svg>',
-};
+  help: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.8 9a2.4 2.4 0 1 1 3.6 2.1c-.9.5-1.4 1.1-1.4 2"></path><path d="M12 17h.01"></path></svg>',
+  close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10"></path><path d="M17 7 7 17"></path></svg>',};
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
   '&': '&amp;',
@@ -41,7 +50,8 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
 }[ch]));
 
 const dateTime = value => value ? new Date(value).toLocaleString() : 'Not available';
-const providerNames = value => Array.isArray(value) ? value.join(', ') : (value || 'Email');const stripHtml = value => String(value ?? '').replace(/<[^>]*>/g, ' ');
+const providerNames = value => Array.isArray(value) ? value.join(', ') : (value || 'Email');
+const stripHtml = value => String(value ?? '').replace(/<[^>]*>/g, ' ');
 const words = value => String(value ?? '').trim().split(/\s+/).filter(Boolean).length;
 const img = story => esc(story?.cover || 'assets/hero.png');
 const avatarMarkup = (url, initials, tone = '') => `<i class="avatar ${tone}">${url
@@ -141,7 +151,7 @@ const card = story => {
       <div class="cover">
         <img src="${img(story)}" loading="lazy" alt="Cover for ${esc(story.title)}">
         <span class="pill">${esc(story.cat)}</span>
-        <button class="save icon-btn" data-id="${story.id}" aria-label="Bookmark ${esc(story.title)}">${icons.bookmark}</button>
+        <button class="save icon-btn ${bookmarkedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Bookmark ${esc(story.title)}" aria-pressed="${bookmarkedStoryIds.has(story.id)}">${icons.bookmark}</button>
       </div>
       <h3><a href="${destination}">${esc(story.title)}</a></h3>
       <p>${esc(story.desc)}</p>
@@ -371,8 +381,8 @@ function reader(story) {
       </div>
 
       <div class="reader-tools">
-        <button class="like icon-btn" data-id="${story.id}" aria-label="Like">${icons.heart}</button>
-        <button class="bookmark icon-btn" data-id="${story.id}" aria-label="Bookmark">${icons.bookmark}</button>
+        <button class="like icon-btn ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Like" aria-pressed="${likedStoryIds.has(story.id)}">${icons.heart}</button>
+        <button class="bookmark icon-btn ${bookmarkedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Bookmark" aria-pressed="${bookmarkedStoryIds.has(story.id)}">${icons.bookmark}</button>
         <button id="font" class="icon-btn" aria-label="Adjust font size"><span>Aa</span></button>
         <button id="readerMode" class="icon-btn" aria-label="Toggle reading mode">${icons.theme}</button>
         <button class="share icon-btn" aria-label="Share story">${icons.share}</button>
@@ -382,7 +392,7 @@ function reader(story) {
         <div class="reader-end">
           <span class="eyebrow">The end</span>
           <h2>Did this story move you?</h2>
-          <button class="btn primary like" data-id="${story.id}"><span class="btn-icon">${icons.heart}</span><span>Appreciate · ${story.likes}</span></button>
+          <button class="btn primary like ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-pressed="${likedStoryIds.has(story.id)}"><span class="btn-icon">${icons.heart}</span><span>Appreciate · ${story.likes}</span></button>
           <div class="story-nav">
             ${prev ? `<a class="btn" href="#story/${prev.slug}">Previous story</a>` : '<span class="btn disabled">Previous story</span>'}
             ${next ? `<a class="btn" href="#story/${next.slug}">Next story</a>` : '<span class="btn disabled">Next story</span>'}
@@ -652,7 +662,7 @@ function legal(kind) {
         ${page.sections.map(([title, body]) => `<section><h2>${title}</h2><p>${body}</p></section>`).join('')}
         <section>
           <h2>Contact</h2>
-          <p>Questions, requests and concerns can be sent to <a href="${esc(gmailComposeUrl())}">kabirsayed.k@gmail.com</a> or through the <a href="#helping-panel">Help Centre</a>.</p>
+          <p>Questions, requests and concerns can be sent to <a data-gmail href="${esc(gmailComposeUrl())}">kabirsayed.k@gmail.com</a> or through the <a data-help-center href="#helping-panel">Help Centre</a>.</p>
         </section>
       </div>
       ${footer()}
@@ -669,7 +679,7 @@ function helpCenter() {
             <span class="eyebrow">Help Centre</span>
             <h1 class="page-title">Tell us what<br>needs attention.</h1>
             <p>Ask for help, suggest a change, report a technical problem, or share an idea for Storyteller.</p>
-            <a class="help-email" href="${esc(gmailComposeUrl())}">kabirsayed.k@gmail.com</a>
+            <a class="help-email" data-gmail href="${esc(gmailComposeUrl())}">kabirsayed.k@gmail.com</a>
           </div>
           <form id="helpForm" class="help-form">
             <div class="field">
@@ -998,15 +1008,22 @@ function bind() {
     const message = $('#helpMessage').value.trim();
     const emailSubject = `[Storyteller ${type}] ${subject}`;
     const emailBody = `${message}\n\nPage: ${location.href}\nSigned in: ${session ? 'Yes' : 'No'}`;
-    location.href = gmailComposeUrl(emailSubject, emailBody);
+    openGmail(emailSubject, emailBody);
     toast('Your email app is ready');
   });
 
-  $$('.save,.bookmark').forEach(button => {
+    $$('.save,.bookmark').forEach(button => {
     button.onclick = async event => {
       event.preventDefault();
       try {
-        toast(await StoryAPI.toggle('bookmarks', button.dataset.id) ? 'Saved' : 'Bookmark removed');
+        const active = await StoryAPI.toggle('bookmarks', button.dataset.id);
+        if (active) bookmarkedStoryIds.add(button.dataset.id);
+        else bookmarkedStoryIds.delete(button.dataset.id);
+        $$('.save,.bookmark').filter(item => item.dataset.id === button.dataset.id).forEach(item => {
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-pressed', String(active));
+        });
+        toast(active ? 'Saved' : 'Bookmark removed');
       } catch (error) {
         authFail(error);
       }
@@ -1016,14 +1033,24 @@ function bind() {
   $$('.like').forEach(button => {
     button.onclick = async () => {
       try {
-        toast(await StoryAPI.toggle('likes', button.dataset.id) ? 'Story appreciated' : 'Like removed');
+        const active = await StoryAPI.toggle('likes', button.dataset.id);
+        if (active) likedStoryIds.add(button.dataset.id);
+        else likedStoryIds.delete(button.dataset.id);
+        $$('.like').filter(item => item.dataset.id === button.dataset.id).forEach(item => {
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-pressed', String(active));
+        });
+        if (currentStory?.id === button.dataset.id) {
+          currentStory.likes = Math.max(0, currentStory.likes + (active ? 1 : -1));
+          $$('.like .btn-icon + span').forEach(label => { label.textContent = `Appreciate · ${currentStory.likes}`; });
+        }
+        toast(active ? 'Story appreciated' : 'Appreciation removed');
       } catch (error) {
         authFail(error);
       }
     };
   });
-
-  $('#comment')?.addEventListener('click', async () => {
+$('#comment')?.addEventListener('click', async () => {
     try {
       const body = $('#commentBody').value.trim();
       if (body) {
@@ -1042,7 +1069,11 @@ function bind() {
       const targetUsername = button?.dataset.username;
       if (!targetUsername) return toast('Writer not available');
       const following = await StoryAPI.follow(targetUsername);
-      if (button) button.textContent = following ? 'Following' : 'Follow';
+      if (button) {
+        button.textContent = following ? 'Following' : 'Follow';
+        button.classList.toggle('active', following);
+        button.setAttribute('aria-pressed', String(following));
+      }
       toast(following ? 'Author followed' : 'Author unfollowed');
     } catch (error) {
       authFail(error);
@@ -1128,13 +1159,20 @@ function bind() {
     }
   });
 
-  $('#font')?.addEventListener('click', () => $('.reader-body')?.classList.toggle('reader-large'));
+
+  $('#font')?.addEventListener('click', event => {
+    const enlarged = $('.reader-body')?.classList.toggle('reader-large') ?? false;
+    event.currentTarget.classList.toggle('active', enlarged);
+    event.currentTarget.setAttribute('aria-pressed', String(enlarged));
+  });
   $('#readerMode')?.addEventListener('click', () => toggleTheme());
-  $('.share')?.addEventListener('click', () => {
+  $('.share')?.addEventListener('click', event => {
+    const button = event.currentTarget;
+    button.classList.add('active');
+    window.setTimeout(() => button.classList.remove('active'), 700);
     if (navigator.share) navigator.share({ title: currentStory.title, url: location.href });
     else navigator.clipboard.writeText(location.href).then(() => toast('Link copied'));
   });
-
   $('.auth-card:not(.resetForm)')?.addEventListener('submit', handleAuth);
   $('.resetForm')?.addEventListener('submit', handlePasswordReset);
   $$('.social').forEach(button => button.onclick = () => StoryAPI.social(button.dataset.provider).catch(authFail));
@@ -1293,12 +1331,16 @@ async function more() {
 }
 
 async function refresh() {
-  [categories, stories] = await Promise.all([
+  const [nextCategories, nextStories, reactions] = await Promise.all([
     StoryAPI.categories(),
     StoryAPI.stories({ to: 23 }),
+    session ? StoryAPI.reactionState().catch(() => ({ likes: [], bookmarks: [] })) : Promise.resolve({ likes: [], bookmarks: [] }),
   ]);
+  categories = nextCategories;
+  stories = nextStories;
+  likedStoryIds = new Set(reactions.likes);
+  bookmarkedStoryIds = new Set(reactions.bookmarks);
 }
-
 function toggleTheme(force) {
   if (force === 'light') document.body.classList.add('light');
   else if (force === 'dark') document.body.classList.remove('light');
@@ -1308,11 +1350,35 @@ function toggleTheme(force) {
 }
 
 function syncChromeIcons() {
-  $('#searchBtn') && ($('#searchBtn').innerHTML = icons.search);
-  $('#bell') && ($('#bell').innerHTML = `${icons.bell}<i></i>`);
-  $('#theme') && ($('#theme').innerHTML = icons.theme);
+  const searchOpen = Boolean($('#search')?.classList.contains('open'));
+  const notificationsOpen = Boolean($('#notifications')?.classList.contains('open'));
+  const helpOpen = Boolean($('#helpOverlay')?.classList.contains('open'));
+  const lightMode = document.body.classList.contains('light');
+  if ($('#searchBtn')) {
+    $('#searchBtn').innerHTML = searchOpen ? icons.close : icons.search;
+    $('#searchBtn').classList.toggle('active', searchOpen);
+    $('#searchBtn').setAttribute('aria-pressed', String(searchOpen));
+  }
+  if ($('#bell')) {
+    $('#bell').innerHTML = `${icons.bell}<i></i>`;
+    $('#bell').classList.toggle('active', notificationsOpen);
+    $('#bell').setAttribute('aria-pressed', String(notificationsOpen));
+  }
+  if ($('#theme')) {
+    $('#theme').innerHTML = icons.theme;
+    $('#theme').classList.toggle('active', lightMode);
+    $('#theme').setAttribute('aria-pressed', String(lightMode));
+  }
+  if ($('#helpBtn')) {
+    $('#helpBtn').innerHTML = helpOpen ? icons.close : icons.help;
+    $('#helpBtn').classList.toggle('active', helpOpen);
+    $('#helpBtn').setAttribute('aria-pressed', String(helpOpen));
+  }
+  if ($('#readerMode')) {
+    $('#readerMode').classList.toggle('active', lightMode);
+    $('#readerMode').setAttribute('aria-pressed', String(lightMode));
+  }
 }
-
 async function syncNavbarAvatar(profile = null) {
   const button = $('#navAvatar');
   if (!button) return;
@@ -1376,19 +1442,36 @@ const openHelpModal = () => {
   helpOverlay.classList.add('open');
   helpOverlay.setAttribute('aria-hidden', 'false');
   $('#closeHelp')?.focus();
+  syncChromeIcons();
 };
 const closeHelpModal = () => {
   helpOverlay.classList.remove('open');
   helpOverlay.setAttribute('aria-hidden', 'true');
+  syncChromeIcons();
 };
 $('#helpBtn').onclick = openHelpModal;
 $('#closeHelp').onclick = closeHelpModal;
 helpOverlay.onclick = event => event.target === helpOverlay && closeHelpModal();
+document.addEventListener('click', event => {
+  const gmailAction = event.target.closest('[data-gmail]');
+  if (gmailAction) {
+    event.preventDefault();
+    openGmail(gmailAction.dataset.subject || '', gmailAction.dataset.body || '');
+    return;
+  }
+  const helpAction = event.target.closest('[data-help-center]');
+  if (helpAction) {
+    event.preventDefault();
+    closeHelpModal();
+    location.hash = 'helping-panel';
+  }
+}, true);
 $('#searchBtn').onclick = () => {
-  overlay.classList.add('open');
-  $('#searchInput').focus();
+  const opening = !overlay.classList.contains('open');
+  overlay.classList.toggle('open', opening);
+  if (opening) $('#searchInput').focus();
+  syncChromeIcons();
 };
-
 $('#searchInput').oninput = debounce(async event => {
   const query = event.target.value.trim();
   if (!query) return ($('#results').innerHTML = '');
@@ -1405,12 +1488,13 @@ $('#searchInput').oninput = debounce(async event => {
   }
 }, 250);
 
-overlay.onclick = event => event.target === overlay && overlay.classList.remove('open');
+overlay.onclick = event => { if (event.target === overlay) { overlay.classList.remove('open'); syncChromeIcons(); } };
 
 $('#bell').onclick = async () => {
   if (!session) return location.hash = 'auth/signin';
   try {
     $('#notifications').classList.toggle('open');
+    syncChromeIcons();
     const items = await StoryAPI.notifications();
     $('#notificationList').innerHTML = items.length
       ? items.map(notification => `

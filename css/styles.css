@@ -287,3 +287,20 @@ body.light .support-grid article,body.light .control-detail-body,body.light .acc
   .control-detail>.control-row{grid-template-columns:1fr}
   .detail-cue{width:max-content}
 }
+/* Audio controls and interactive icon states */
+.audio-toggle{position:fixed;left:22px;bottom:22px;z-index:145;width:48px;height:48px;border:1px solid var(--line);border-radius:50%;background:rgba(12,12,11,.88);color:var(--text);box-shadow:0 12px 34px rgba(0,0,0,.28);backdrop-filter:blur(14px);transition:transform .22s ease,color .22s ease,border-color .22s ease,background .22s ease}
+.audio-toggle:hover,.audio-toggle.active{color:var(--accent2);border-color:color-mix(in srgb,var(--accent2) 55%,var(--line));background:rgba(23,20,16,.94)}
+.audio-toggle svg,.icon-btn svg{transition:fill .2s ease,stroke .2s ease,transform .2s ease}
+.audio-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.btn:active,.icon-btn:active,.chip:active{transform:scale(.96)}
+.icon-btn.active{color:var(--accent2);border-color:color-mix(in srgb,var(--accent2) 48%,var(--line));background:color-mix(in srgb,var(--accent2) 11%,transparent)}
+.like.active{color:#ff5f8f!important}
+.like.active svg{fill:#ff5f8f!important;stroke:#ff5f8f!important;transform:scale(1.08)}
+.bookmark.active,.save.active{color:#f2b965!important}
+.bookmark.active svg,.save.active svg{fill:#f2b965!important;stroke:#f2b965!important;transform:scale(1.06)}
+.followAuthor.active{color:#15110c;background:var(--accent2);border-color:var(--accent2)}
+.share.active svg,#font.active svg,#readerMode.active svg{transform:scale(1.08)}
+body.light .audio-toggle{background:rgba(249,244,234,.9);color:#2b251e;box-shadow:0 12px 34px rgba(47,36,22,.16)}
+body.light .audio-toggle:hover,body.light .audio-toggle.active{color:#9a601e;background:#fffaf0}
+@media(max-width:700px){.audio-toggle{left:14px;bottom:14px;width:44px;height:44px}}
+@media(prefers-reduced-motion:reduce){.audio-toggle,.audio-toggle svg,.icon-btn svg{transition:none}}

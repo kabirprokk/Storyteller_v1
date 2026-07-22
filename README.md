@@ -28,6 +28,7 @@ Storyteller is a responsive writing and reading platform built as a static singl
 - Reader mode, likes, bookmarks, comments, sharing, reports, and reading history
 - Public writer profiles, global avatars, follows, and notifications
 - Responsive dark and light themes
+- Optional low-volume local theme music, mute control, click feedback, and stateful interaction icons
 - Session-only human-verification gate with 512 local sentence combinations and typing-rhythm checks
 - Role-protected administration with expandable account records, report evidence, moderation controls, and metrics
 - Integrated Help Centre for questions, problem reports, suggestions, and administrator email
@@ -59,6 +60,7 @@ The frontend has no build step. Browser dependencies are pinned and self-hosted 
 |   `-- human-verification.css    Verification-gate presentation
 |-- js/
 |   |-- app-v2.js                 UI, routing, editor, and interactions
+|   |-- audio-controller.js       Local theme music, mute preference, and click feedback
 |   |-- config.js                 Public Supabase browser configuration
 |   |-- frame-guard.js            Clickjacking fallback protection
 |   |-- human-verification.js     Session-only verification logic
