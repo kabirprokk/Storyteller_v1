@@ -1,0 +1,8 @@
+# Publish only the static website through the legacy GitHub Pages/Jekyll build.
+# These files remain version-controlled but must not be copied into the public site artifact.
+exclude:
+  - supabase
+  - SECURITY.md
+  - .github
+  - .gitignore
+

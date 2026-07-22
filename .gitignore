@@ -1,0 +1,19 @@
+# Never commit local or production secrets.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Supabase CLI state and local function secrets.
+supabase/.branches/
+supabase/.temp/
+supabase/functions/.env
+supabase/functions/.env.*
+
+# Local tooling and logs.
+node_modules/
+*.log
+
