@@ -379,3 +379,11 @@ body.light [data-human-gate]{background:radial-gradient(circle at 16% 5%,#d8a66d
 body.light [data-human-card]{background:linear-gradient(145deg,#fffdf9,#f1e8dc);color:#201a15;border-color:#34281b24;box-shadow:0 38px 110px #4d351622}
 body.light [data-human-sentence],body.light [data-human-input]{background:#fffaf3;color:#2b221b;border-color:#34281b29}
 body.light ::selection{background:#b1762e35;color:#1f1812}
+/* Light-theme hero contrast over cinematic artwork. */
+body.light .hero .hero-copy,body.light .hero .hero-copy h1{color:#fffaf0;text-shadow:0 3px 28px #000b}
+body.light .hero .hero-copy p{color:#e5ded3;text-shadow:0 2px 14px #000d}
+body.light .hero .hero-copy .eyebrow{color:#ef7a4d;text-shadow:0 2px 12px #000c}
+body.light .hero .hero-copy .btn{color:#fffaf0;background:#11100ea6;border-color:#fffaf05c;box-shadow:0 12px 32px #0005}
+body.light .hero .hero-copy .btn:hover{background:#211d18d9;border-color:#fffaf0a6}
+body.light .hero .hero-copy .btn.primary{color:#201913;background:#fffaf0;border-color:#fffaf0;text-shadow:none}
+body.light .hero .hero-copy .btn.primary:hover{background:#fff;border-color:#fff}
