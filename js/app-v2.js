@@ -38,6 +38,7 @@ const icons = {
   heart: '<svg class="lucide lucide-heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" /></svg>',
   bookmark: '<svg class="lucide lucide-bookmark" viewBox="0 0 24 24" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" /></svg>',
   share: '<svg class="lucide lucide-arrow-up-right" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7" /><path d="M7 7h10v10" /></svg>',
+  donate: '<svg class="lucide lucide-indian-rupee" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12"></path><path d="M6 8h12"></path><path d="m6 13 8.5 8"></path><path d="M6 13h3"></path><path d="M9 13c6.667 0 6.667-10 0-10"></path></svg>',
   help: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.8 9a2.4 2.4 0 1 1 3.6 2.1c-.9.5-1.4 1.1-1.4 2"></path><path d="M12 17h.01"></path></svg>',
   close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10"></path><path d="M17 7 7 17"></path></svg>',};
 
@@ -385,6 +386,7 @@ function reader(story) {
       <div class="reader-tools">
         <button class="like icon-btn ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Like" aria-pressed="${likedStoryIds.has(story.id)}">${icons.heart}</button>
         <button class="bookmark icon-btn ${bookmarkedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Bookmark" aria-pressed="${bookmarkedStoryIds.has(story.id)}">${icons.bookmark}</button>
+        ${story.authorDonationQr && !(story.isOwn || (session && session.user.id === story.authorId)) ? `<button class="writer-donate-tool openWriterDonation icon-btn" data-qr="${esc(story.authorDonationQr)}" data-writer="${esc(story.author)}" aria-label="Donate to ${esc(story.author)}" title="Support this writer">${icons.donate}</button>` : ''}
         <button id="font" class="icon-btn" aria-label="Adjust font size"><span>Aa</span></button>
         <button id="readerMode" class="icon-btn" aria-label="Toggle reading mode">${icons.theme}</button>
         <button class="share icon-btn" aria-label="Share story">${icons.share}</button>

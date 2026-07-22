@@ -432,3 +432,8 @@ body.light .qr-upload{background:#fffdf9;border-color:#6c513657}
 body.light .openWriterDonation{color:#8b521b;background:#fffaf3}
 body.light .writer-donation-settings>.writer-qr-preview{background:#f4ede3;border-color:#34281b20}
 @media(max-width:650px){.writer-donation-settings{grid-template-columns:1fr}.writer-donation-settings>.writer-qr-preview{width:min(190px,100%)}}
+.writer-donate-tool{color:var(--accent2)}
+.writer-donate-tool:hover,.writer-donate-tool:focus-visible{color:#f4c06d!important;border-color:#f0bd7c66!important;background:#f0bd7c14!important}
+.writer-donate-tool:active svg{transform:scale(.9)}
+body.light .writer-donate-tool{color:#8b521b}
+body.light .writer-donate-tool:hover,body.light .writer-donate-tool:focus-visible{color:#75400e!important;border-color:#a56b1f70!important;background:#b1762e18!important}
