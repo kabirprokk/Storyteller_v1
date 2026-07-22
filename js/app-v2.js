@@ -15,6 +15,13 @@ let filterRequest = 0;
 let heroTimer = null;
 let adminMode = false;
 const logo = 'assets/storyteller-mark.png';
+const supportEmail = 'kabirsayed.k@gmail.com';
+const gmailComposeUrl = (subject = '', body = '') => {
+  const parameters = new URLSearchParams({ view: 'cm', fs: '1', to: supportEmail });
+  if (subject) parameters.set('su', subject);
+  if (body) parameters.set('body', body);
+  return `https://mail.google.com/mail/?${parameters}`;
+};
 const brand = `<img class="brand-mark" src="${logo}" alt="" aria-hidden="true"><span>STORYTELLER</span>`;
 const icons = {
   search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>',
@@ -645,7 +652,7 @@ function legal(kind) {
         ${page.sections.map(([title, body]) => `<section><h2>${title}</h2><p>${body}</p></section>`).join('')}
         <section>
           <h2>Contact</h2>
-          <p>Questions, requests and concerns can be sent to <a href="mailto:kabirsayed.k@gmail.com">kabirsayed.k@gmail.com</a> or through the <a href="#helping-panel">Help Centre</a>.</p>
+          <p>Questions, requests and concerns can be sent to <a href="${esc(gmailComposeUrl())}">kabirsayed.k@gmail.com</a> or through the <a href="#helping-panel">Help Centre</a>.</p>
         </section>
       </div>
       ${footer()}
@@ -662,7 +669,7 @@ function helpCenter() {
             <span class="eyebrow">Help Centre</span>
             <h1 class="page-title">Tell us what<br>needs attention.</h1>
             <p>Ask for help, suggest a change, report a technical problem, or share an idea for Storyteller.</p>
-            <a class="help-email" href="mailto:kabirsayed.k@gmail.com">kabirsayed.k@gmail.com</a>
+            <a class="help-email" href="${esc(gmailComposeUrl())}">kabirsayed.k@gmail.com</a>
           </div>
           <form id="helpForm" class="help-form">
             <div class="field">
@@ -991,7 +998,7 @@ function bind() {
     const message = $('#helpMessage').value.trim();
     const emailSubject = `[Storyteller ${type}] ${subject}`;
     const emailBody = `${message}\n\nPage: ${location.href}\nSigned in: ${session ? 'Yes' : 'No'}`;
-    location.href = `mailto:kabirsayed.k@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    location.href = gmailComposeUrl(emailSubject, emailBody);
     toast('Your email app is ready');
   });
 
