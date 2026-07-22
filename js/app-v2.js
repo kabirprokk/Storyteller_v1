@@ -1151,6 +1151,7 @@ async function syncNavbarAvatar(profile = null) {
   const button = $('#navAvatar');
   if (!button) return;
   if (!session) {
+    button.classList.remove('has-image');
     button.textContent = 'ST';
     button.title = 'Sign in or create an account';
     return;
@@ -1161,6 +1162,7 @@ async function syncNavbarAvatar(profile = null) {
     const person = profile || await StoryAPI.profile();
     if (!person || session?.user.id !== userId) return;
     const initials = person.display_name?.split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase() || 'ST';
+    button.classList.toggle('has-image', Boolean(person.avatar_url));
     button.innerHTML = person.avatar_url
       ? `<img src="${esc(person.avatar_url)}" alt="${esc(person.display_name || 'Your profile')}">`
       : esc(initials);
