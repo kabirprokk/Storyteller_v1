@@ -37,6 +37,15 @@
 .reader-meta .byline{margin:0}
 .reader-meta .author-actions{margin-left:auto}
 
+/* Three-layer hero carousel: no blank frame between slow crossfades. */
+.hero-bg{background:#080807;transform:none;overflow:hidden}
+.hero-bg::after{content:"";position:absolute;z-index:2;inset:0;background:linear-gradient(90deg,#080807f7 2%,#080807c9 38%,transparent 72%),linear-gradient(0deg,#080807 0%,transparent 38%);pointer-events:none}
+.hero-slide{position:absolute;z-index:1;inset:-2%;opacity:0;transform:scale(1.025);background-position:center;background-repeat:no-repeat;background-size:cover;transition:opacity 2.4s ease-in-out,transform 32s ease-out;will-change:opacity,transform}
+.hero-slide.active{opacity:1;transform:scale(1.065)}
+.hero-slide-mountain{background-image:url('../assets/hero.png')}
+.hero-slide-logo{background-color:#101112;background-image:url('../assets/hero-logo.png');background-size:contain;filter:brightness(1.18) contrast(1.05)}
+.hero-slide-stories{background-image:url('../assets/hero-stories.png')}
+
 body:not(.light){background:radial-gradient(circle at 18% 0%,rgba(228,98,58,.16) 0,transparent 22%),radial-gradient(circle at 82% 12%,rgba(240,189,124,.08) 0,transparent 16%),var(--bg)}
 body.light{--bg:#faf8f4;--card:#ffffff;--text:#111111;--muted:#5f5b55;--line:#11111122;--accent:#d95f35;--accent2:#111111;background:linear-gradient(180deg,#ffffff 0%,#f7f4ef 40%,#eee8df 100%)}
 body.light #header{background:linear-gradient(#ffffffd6,transparent)}
@@ -103,6 +112,12 @@ body.light .control-row button:hover{background:#11111108}
   .reader-intro h1{font-size:clamp(52px,16vw,76px);margin:18px 0 14px}
   .reader-intro .subtitle{font-size:22px}
   .reader-meta{margin-bottom:40px}
+  .hero-slide-mountain{background-position:63% center}
+  .hero-slide-logo{background-size:cover;background-position:center}
+  .hero-slide-stories{background-position:66% center}
+  .hero-copy{width:100%}
+  .hero h1{font-size:clamp(48px,14vw,58px)}
+  .hero p{max-width:100%}
 }
 
 /* Icon and contrast polish */
@@ -131,7 +146,7 @@ body.light .control-row button:hover{background:#11111108}
 .reader-tools .icon-btn svg{width:19px;height:19px}
 .auth-card .brand-mark{width:30px;height:30px}
 
-body{color-scheme:dark}
+body{color-scheme:dark;overflow-x:hidden}
 body.light{color-scheme:light}
 body.light .brand-mark{box-shadow:0 10px 24px rgba(17,17,17,.12)}
 body.light .reader-tools{background:rgba(255,255,255,.82)}

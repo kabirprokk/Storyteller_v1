@@ -12,6 +12,7 @@ let timer = null;
 let saveQueue = Promise.resolve();
 let readTimer = null;
 let filterRequest = 0;
+let heroTimer = null;
 let adminMode = false;
 const logo = 'assets/storyteller-mark.png';
 const brand = `<img class="brand-mark" src="${logo}" alt="" aria-hidden="true"><span>STORYTELLER</span>`;
@@ -194,14 +195,17 @@ function home() {
     .filter(story => story.status === 'published')
     .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
   const featured = published.find(story => story.featured) || null;
-  const heroStory = featured || published[0] || null;
   const recent = published.slice(0, 6);
   const trending = [...published].sort((a, b) => b.views - a.views).slice(0, 5);
 
   return `
     <div class="page">
       <div class="hero">
-        <div class="hero-bg" ${heroStory ? `style="background-image:linear-gradient(90deg,#050505f5,#050505a6 48%,transparent 78%),linear-gradient(0deg,var(--bg),transparent 30%),url('${img(heroStory)}')"` : ''}></div>
+        <div class="hero-bg" aria-hidden="true">
+          <div class="hero-slide hero-slide-mountain active"></div>
+          <div class="hero-slide hero-slide-logo"></div>
+          <div class="hero-slide hero-slide-stories"></div>
+        </div>
         <div class="container">
           <div class="hero-copy">
             <span class="eyebrow">Stories that stay</span>
@@ -824,6 +828,7 @@ async function loadComments() {
 }
 
 function bind() {
+  startHeroRotation();
   requestAnimationFrame(() => $$('.reveal').forEach(card => card.classList.add('seen')));
 
   $$('.save,.bookmark').forEach(button => {
@@ -984,6 +989,24 @@ function bind() {
 
   $$('[data-admin]').forEach(button => button.onclick = () => adminAction(button));
   editorStats();
+}
+
+function startHeroRotation() {
+  clearInterval(heroTimer);
+  heroTimer = null;
+  const slides = $$('.hero-slide');
+  if (slides.length < 2) return;
+
+  slides.forEach((slide, index) => slide.classList.toggle('active', index === 0));
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  let active = 0;
+  heroTimer = setInterval(() => {
+    if (document.hidden || !document.querySelector('.hero-slide')) return;
+    slides[active].classList.remove('active');
+    active = (active + 1) % slides.length;
+    slides[active].classList.add('active');
+  }, 30000);
 }
 
 async function handlePasswordReset(event) {
