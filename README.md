@@ -29,7 +29,9 @@ Storyteller is a responsive writing and reading platform built as a static singl
 - Public writer profiles, global avatars, follows, and notifications
 - Responsive dark and light themes
 - Session-only human-verification gate with 512 local sentence combinations and typing-rhythm checks
-- Role-protected administration for stories, users, comments, reports, and metrics
+- Role-protected administration with expandable account records, report evidence, moderation controls, and metrics
+- Integrated Help Centre for questions, problem reports, suggestions, and administrator email
+- Detailed Privacy Policy, Terms and Conditions, and Community Rules
 - Rate-limited view counting through a Supabase Edge Function
 
 ## Architecture
@@ -106,6 +108,7 @@ This feature adds friction for basic automation; it is not a security boundary b
 - Row Level Security enforces ownership and administration in Postgres, not only in the UI.
 - Anonymous readers use minimized public views that omit account UUIDs and internal profile state.
 - Direct anonymous execution of the legacy view counter is revoked.
+- Sensitive account-directory data is exposed only through an administrator-checked RPC.
 - View events are deduplicated in hourly windows using a salted one-way visitor hash.
 - Story HTML is sanitized before rendering.
 - Storage uploads require authenticated, user-owned paths and approved image types.

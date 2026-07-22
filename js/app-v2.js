@@ -33,7 +33,8 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
   "'": '&#39;'
 }[ch]));
 
-const stripHtml = value => String(value ?? '').replace(/<[^>]*>/g, ' ');
+const dateTime = value => value ? new Date(value).toLocaleString() : 'Not available';
+const providerNames = value => Array.isArray(value) ? value.join(', ') : (value || 'Email');const stripHtml = value => String(value ?? '').replace(/<[^>]*>/g, ' ');
 const words = value => String(value ?? '').trim().split(/\s+/).filter(Boolean).length;
 const img = story => esc(story?.cover || 'assets/hero.png');
 const avatarMarkup = (url, initials, tone = '') => `<i class="avatar ${tone}">${url
@@ -126,22 +127,24 @@ async function importTxtStory(file) {
   toast(`Imported ${file.name}`);
 }
 
-const card = story => `
-  <article class="story reveal">
-    <div class="cover">
-      <img src="${img(story)}" loading="lazy" alt="">
-      <span class="pill">${esc(story.cat)}</span>
-      <button class="save icon-btn" data-id="${story.id}" aria-label="Bookmark">${icons.bookmark}</button>
-    </div>
-    <h3><a href="#story/${encodeURIComponent(story.slug)}">${esc(story.title)}</a></h3>
-    <p>${esc(story.desc)}</p>
-    <div class="between meta">
-      <span class="author">${avatarMarkup(story.authorAvatar, story.ini, 'peach')}${esc(story.author)}</span>
-      <span>${esc(story.time)} · Like ${story.likes}</span>
-    </div>
-  </article>
-`;
-
+const card = story => {
+  const destination = `#story/${encodeURIComponent(story.slug)}`;
+  return `
+    <article class="story reveal story-link" data-story-url="${destination}" role="link" tabindex="0" aria-label="Read ${esc(story.title)}">
+      <div class="cover">
+        <img src="${img(story)}" loading="lazy" alt="Cover for ${esc(story.title)}">
+        <span class="pill">${esc(story.cat)}</span>
+        <button class="save icon-btn" data-id="${story.id}" aria-label="Bookmark ${esc(story.title)}">${icons.bookmark}</button>
+      </div>
+      <h3><a href="${destination}">${esc(story.title)}</a></h3>
+      <p>${esc(story.desc)}</p>
+      <div class="between meta">
+        <span class="author">${avatarMarkup(story.authorAvatar, story.ini, 'peach')}${esc(story.author)}</span>
+        <span>${esc(story.time)} · Like ${story.likes}</span>
+      </div>
+    </article>
+  `;
+};
 const empty = (title, body) => `
   <div class="empty">
     <h3>${esc(title)}</h3>
@@ -171,8 +174,10 @@ const footer = () => `
           <h5>ACCOUNT</h5>
           <a href="#auth/signin">${session ? 'Account' : 'Sign in'}</a>
           ${adminMode ? '<a href="#admin">Admin console</a>' : ''}
+          <button class="footer-link openHelp" type="button">Help</button>
           <a href="#privacy">Privacy</a>
           <a href="#terms">Terms</a>
+          <a href="#rules">Community rules</a>
         </div>
       </div>
     </div>
@@ -578,40 +583,116 @@ function resetPassword() {
 }
 
 function legal(kind) {
-  const privacy = kind === 'privacy';
+  const pages = {
+    privacy: {
+      eyebrow: 'Privacy policy',
+      title: 'Your stories. Your data.',
+      intro: 'This policy explains what Storyteller collects, why it is used, where it is stored, and the choices available to you.',
+      sections: [
+        ['Information we collect', 'Account information includes your email address, authentication identifiers, display name, username, biography, avatar and account status. Activity information includes stories, drafts, comments, likes, bookmarks, follows, reports, notifications and reading history. Basic technical information may be processed by our hosting and database providers to deliver and protect the service.'],
+        ['How information is used', 'We use information to create and secure accounts, publish and organize stories, maintain your library, provide social features, investigate reports, prevent abuse, support users and improve Storyteller. We do not sell personal information.'],
+        ['Public information', 'Published stories, public profile fields, visible comments and aggregate engagement counts can be viewed by other visitors. Drafts, bookmarks, reading history, notifications, account roles and suspension state are not intentionally exposed to the public.'],
+        ['Storage and service providers', 'Supabase provides authentication, database, Edge Function and media-storage infrastructure. GitHub Pages hosts the static website. Email messages you choose to send are handled by your email provider and Gmail. Each provider processes limited information under its own terms and privacy practices.'],
+        ['Browser storage', 'Storyteller uses browser storage for authentication sessions, theme preferences and the current-tab human-verification state. Clearing site data or signing out removes or invalidates applicable local state.'],
+        ['Security and retention', 'We use database access policies, minimized public views, content sanitization and restricted administrative functions. No online service can guarantee absolute security. Information is retained while needed to provide the service, meet security or moderation needs, resolve disputes and comply with applicable obligations.'],
+        ['Your choices', 'You can edit your profile, drafts and published work, delete your stories and sign out at any time. To request account deletion, access or correction that is not available in the product, contact the administrator. Public copies shared by others or required moderation records may not disappear immediately.'],
+        ['Children and sensitive information', 'Storyteller is not designed for children who cannot legally consent to online services in their location. Do not publish passwords, financial details, government identifiers, private addresses or another person’s sensitive information.'],
+        ['Policy changes', 'We may update this policy as Storyteller changes. The updated date and revised text will appear on this page. Continued use after an update means the new policy applies to future use.'],
+      ],
+    },
+    terms: {
+      eyebrow: 'Terms and conditions',
+      title: 'Create with care.',
+      intro: 'These terms govern access to Storyteller. By using the service, you agree to follow them and the Community Rules.',
+      sections: [
+        ['Eligibility and acceptance', 'Use Storyteller only if you can lawfully agree to these terms. If you use the service for an organization, you confirm that you are authorized to act for it. Stop using the service if you do not agree.'],
+        ['Accounts and security', 'Provide accurate information, protect your credentials and promptly report suspected unauthorized access. You are responsible for activity performed through your account. Accounts may not be sold, shared for abuse or used to evade enforcement.'],
+        ['Your content', 'You retain ownership of original content you create. When you publish, you grant Storyteller a non-exclusive, worldwide, royalty-free license to host, reproduce, format and display that content solely to operate, promote and improve the service. You may end this license by deleting the content, subject to reasonable backups and legal or moderation retention.'],
+        ['Your responsibilities', 'Publish only material you have the right to share. Do not post unlawful, threatening, deceptive, hateful, exploitative, plagiarized, privacy-violating or malicious content. Do not attack the service, scrape protected data, manipulate engagement, impersonate others or interfere with another user.'],
+        ['Moderation and reports', 'Administrators may review reports, restrict visibility, remove content, change featured status, suspend accounts or permanently delete accounts when reasonably necessary to protect users, enforce these terms or comply with law. Reports must be made honestly and must not be used for harassment.'],
+        ['Copyright and complaints', 'If you believe content violates your rights, send a detailed notice identifying the work, the Storyteller content, your contact information and a good-faith explanation. False or abusive notices may lead to restrictions.'],
+        ['Service availability', 'Storyteller may change, pause or discontinue features. We work to keep the service reliable but provide it on an “as available” basis without a guarantee of uninterrupted operation or permanent storage. Keep copies of important work.'],
+        ['Liability', 'To the extent permitted by applicable law, Storyteller and its administrator are not responsible for indirect losses, user-generated content, third-party services or events outside reasonable control. Nothing here excludes rights that cannot legally be excluded.'],
+        ['Termination and changes', 'You may stop using Storyteller at any time. We may restrict or terminate access for serious or repeated violations. Terms may be updated when the product, risks or legal requirements change; the current version will remain available here.'],
+      ],
+    },
+    rules: {
+      eyebrow: 'Community rules',
+      title: 'Make this a place worth reading.',
+      intro: 'These rules apply to stories, comments, profiles, reports and every other community interaction.',
+      sections: [
+        ['Respect people', 'Challenge ideas without attacking people. Harassment, threats, hate, dehumanizing language, targeted humiliation and encouragement of violence are not allowed.'],
+        ['Share work you may publish', 'Post original work or material you have permission to use. Credit sources where appropriate. Plagiarism, copyright infringement and misleading authorship are prohibited.'],
+        ['Protect privacy', 'Do not reveal private contact details, addresses, credentials, intimate material or sensitive personal information without clear permission. Never use Storyteller to dox, blackmail or stalk someone.'],
+        ['Keep people safe', 'Do not promote exploitation, sexual content involving minors, instructions intended to cause serious harm, scams, malware or illegal transactions. Fiction may explore difficult subjects, but context and responsible presentation matter.'],
+        ['Be honest', 'Do not impersonate people, fabricate reports, coordinate fake engagement, repeatedly manipulate views or use deceptive links. Clearly distinguish personal opinion, fiction and factual claims where confusion could cause harm.'],
+        ['Avoid spam', 'Do not flood stories or comments, post repetitive promotions, automate unwanted interactions or use irrelevant tags and titles to capture attention.'],
+        ['Use reports responsibly', 'Report content when you genuinely believe it violates these rules. Include a clear reason so administrators can understand the concern. Do not report content merely because you disagree with it.'],
+        ['Enforcement', 'Responses may include a warning, reduced visibility, content removal, temporary suspension or permanent account deletion. Severity, context, history and immediate risk are considered. Contact the Help Centre if you believe an action was made in error.'],
+      ],
+    },
+  };
+
+  const page = pages[kind] || pages.terms;
   return `
     <div class="page legal">
       <div class="legal-copy">
         <a class="brand" href="#home">${brand}</a>
-        <span class="eyebrow">${privacy ? 'Privacy' : 'Terms'}</span>
-        <h1>${privacy ? 'Your stories. Your data.' : 'A thoughtful community.'}</h1>
-        <p>Last updated July 21, 2026</p>
-        ${privacy ? `
-          <h2>What we collect</h2>
-          <p>We store account details, profile information, stories, comments, reactions, bookmarks and reading history needed to operate STORYTELLER. Google sign-in supplies your basic profile and email; we do not receive your Google password.</p>
-          <h2>How we use information</h2>
-          <p>Information is used to authenticate you, publish your work, personalize your library, moderate the community and secure the service. We do not sell personal information.</p>
-          <h2>Your choices</h2>
-          <p>You may edit your profile and delete your content. Contact the site administrator to request complete account deletion.</p>
-          <h2>Service providers</h2>
-          <p>Supabase provides authentication, database and storage infrastructure. GitHub Pages hosts the website.</p>
-        ` : `
-          <h2>Publish responsibly</h2>
-          <p>You retain ownership of your writing and grant STORYTELLER permission to display content you publish. Do not post illegal, abusive, plagiarized or privacy-violating material.</p>
-          <h2>Moderation</h2>
-          <p>Administrators may hide or remove content, suspend accounts and act on reports to protect the community.</p>
-          <h2>Accounts</h2>
-          <p>Keep your account secure and provide accurate information. You are responsible for activity performed through your account.</p>
-          <h2>Availability</h2>
-          <p>The service may change as it develops. We aim for reliability but cannot guarantee uninterrupted availability.</p>
-        `}
-        <p>Questions can be directed to the project administrator.</p>
+        <span class="eyebrow">${page.eyebrow}</span>
+        <h1>${page.title}</h1>
+        <p class="legal-updated">Last updated July 22, 2026</p>
+        <p class="legal-intro">${page.intro}</p>
+        ${page.sections.map(([title, body]) => `<section><h2>${title}</h2><p>${body}</p></section>`).join('')}
+        <section>
+          <h2>Contact</h2>
+          <p>Questions, requests and concerns can be sent to <a href="mailto:kabirsayed.k@gmail.com">kabirsayed.k@gmail.com</a> or through the <a href="#helping-panel">Help Centre</a>.</p>
+        </section>
       </div>
       ${footer()}
     </div>
   `;
 }
 
+function helpCenter() {
+  return `
+    <div class="page help-page" id="helping-panel">
+      <section class="help-hero">
+        <div class="container help-layout">
+          <div>
+            <span class="eyebrow">Help Centre</span>
+            <h1 class="page-title">Tell us what<br>needs attention.</h1>
+            <p>Ask for help, suggest a change, report a technical problem, or share an idea for Storyteller.</p>
+            <a class="help-email" href="mailto:kabirsayed.k@gmail.com">kabirsayed.k@gmail.com</a>
+          </div>
+          <form id="helpForm" class="help-form">
+            <div class="field">
+              <label for="helpType">What can we help with?</label>
+              <select id="helpType" required>
+                <option value="Question">Question</option>
+                <option value="Problem report">Report a problem</option>
+                <option value="Change suggestion">Suggest a change</option>
+                <option value="Account help">Account help</option>
+                <option value="Moderation appeal">Moderation appeal</option>
+              </select>
+            </div>
+            <div class="field"><label for="helpSubject">Subject</label><input id="helpSubject" maxlength="120" required placeholder="A short summary"></div>
+            <div class="field"><label for="helpMessage">Details</label><textarea id="helpMessage" minlength="10" maxlength="2000" required placeholder="Explain what happened, what you expected, and any useful page or story link."></textarea></div>
+            <button class="btn primary" type="submit">Prepare email</button>
+            <p class="form-note">Submitting opens your email app with the message addressed to the Storyteller administrator. Nothing is sent without your confirmation.</p>
+          </form>
+        </div>
+      </section>
+      <section>
+        <div class="container support-grid">
+          <article><span class="eyebrow">Before writing</span><h2>Include useful context.</h2><p>Add the page or story name, what you were doing, what went wrong and the result you expected. Never include passwords or private authentication codes.</p></article>
+          <article><span class="eyebrow">Community safety</span><h2>Report stories in place.</h2><p>For a published story, use its Report button. That securely links the reason, reporter and exact story inside the administrator control room.</p></article>
+          <article><span class="eyebrow">Response</span><h2>We will review it.</h2><p>Messages are reviewed as availability permits. Urgent danger should be reported to the appropriate local emergency or legal authority.</p></article>
+        </div>
+      </section>
+      ${footer()}
+    </div>
+  `;
+}
 async function admin() {
   if (!adminMode) return `<div class="page auth-wrap">${empty('Access denied', 'This area is reserved for administrators.')}</div>`;
 
@@ -637,19 +718,46 @@ async function admin() {
   `).join('');
 
   const userRows = usersData.map(user => `
-    <div class="control-row">
-      <div>
-        <b>${esc(user.display_name)}</b>
-        <small>@${esc(user.username)} · ${esc(user.role)}</small>
+    <details class="control-detail account-detail">
+      <summary class="control-row">
+        <div class="admin-person">
+          ${avatarMarkup(user.avatar_url, (user.display_name || user.username || 'U').slice(0, 2))}
+          <span><b>${esc(user.display_name || 'Unnamed account')}</b><small>@${esc(user.username)} · ${esc(user.role)}${user.is_suspended ? ' · Suspended' : ''}</small></span>
+        </div>
+        <span class="detail-cue">View account details</span>
+      </summary>
+      <div class="control-detail-body">
+        <div class="detail-grid">
+          <div><small>Email</small><b>${esc(user.email || 'Unavailable until directory migration is applied')}</b></div>
+          <div><small>Account ID</small><b>${esc(user.id)}</b></div>
+          <div><small>Role</small><b>${esc(user.role)}</b></div>
+          <div><small>Status</small><b>${user.is_suspended ? 'Suspended' : 'Active'}</b></div>
+          <div><small>Joined</small><b>${esc(dateTime(user.created_at))}</b></div>
+          <div><small>Updated</small><b>${esc(dateTime(user.updated_at))}</b></div>
+          <div><small>Email confirmed</small><b>${esc(dateTime(user.email_confirmed_at))}</b></div>
+          <div><small>Last sign-in</small><b>${esc(dateTime(user.last_sign_in_at))}</b></div>
+          <div><small>Sign-in providers</small><b>${esc(providerNames(user.providers))}</b></div>
+        </div>
+        <div class="account-bio"><small>Biography</small><p>${esc(user.bio || 'No biography provided.')}</p></div>
+        <div class="account-stats">
+          <span><b>${user.story_count ?? '—'}</b>Stories</span>
+          <span><b>${user.published_count ?? '—'}</b>Published</span>
+          <span><b>${user.draft_count ?? '—'}</b>Drafts</span>
+          <span><b>${user.comment_count ?? '—'}</b>Comments</span>
+          <span><b>${user.like_count ?? '—'}</b>Likes</span>
+          <span><b>${user.bookmark_count ?? '—'}</b>Bookmarks</span>
+          <span><b>${user.follower_count ?? '—'}</b>Followers</span>
+          <span><b>${user.following_count ?? '—'}</b>Following</span>
+          <span><b>${user.report_count ?? '—'}</b>Reports</span>
+        </div>
+        <div class="row-actions">
+          <button data-admin="role" data-id="${user.id}" data-value="${user.role === 'admin' ? 'writer' : 'admin'}">Make ${user.role === 'admin' ? 'writer' : 'admin'}</button>
+          <button data-admin="suspend" data-id="${user.id}" data-value="${!user.is_suspended}">${user.is_suspended ? 'Restore' : 'Suspend'}</button>
+          <button class="danger" data-admin="delete-user" data-id="${user.id}">Delete account</button>
+        </div>
       </div>
-      <div class="row-actions">
-        <button data-admin="role" data-id="${user.id}" data-value="${user.role === 'admin' ? 'writer' : 'admin'}">Make ${user.role === 'admin' ? 'writer' : 'admin'}</button>
-        <button data-admin="suspend" data-id="${user.id}" data-value="${!user.is_suspended}">${user.is_suspended ? 'Restore' : 'Suspend'}</button>
-        <button class="danger" data-admin="delete-user" data-id="${user.id}">Delete</button>
-      </div>
-    </div>
+    </details>
   `).join('');
-
   const commentRows = commentsData.map(comment => `
     <div class="control-row">
       <div>
@@ -663,16 +771,40 @@ async function admin() {
     </div>
   `).join('');
 
-  const reportRows = reportsData.map(report => `
-    <div class="control-row">
-      <div>
-        <b>${esc(report.reason)}</b>
-        <small>${esc(report.profiles?.display_name)} · ${esc(report.status)}</small>
-      </div>
-      <button data-admin="resolve" data-id="${report.id}">Resolve</button>
-    </div>
-  `).join('');
-
+  const reportRows = reportsData.map(report => {
+    const targetStory = report.story || report.comment?.story || null;
+    const targetLabel = report.story ? 'Story' : 'Comment';
+    const targetTitle = report.story?.title || report.comment?.story?.title || 'Removed content';
+    const targetLink = targetStory?.slug ? `#story/${encodeURIComponent(targetStory.slug)}` : '';
+    return `
+      <details class="control-detail report-detail">
+        <summary class="control-row">
+          <div>
+            <b>${targetLabel}: ${esc(targetTitle)}</b>
+            <small>Reported by ${esc(report.reporter?.display_name || 'Unknown user')} · ${esc(report.status)} · ${esc(dateTime(report.created_at))}</small>
+          </div>
+          <span class="detail-cue">Review report</span>
+        </summary>
+        <div class="control-detail-body">
+          <div class="report-reason"><small>Reason provided</small><p>${esc(report.reason)}</p></div>
+          <div class="detail-grid">
+            <div><small>Report ID</small><b>${esc(report.id)}</b></div>
+            <div><small>Reporter</small><b>${esc(report.reporter?.display_name || 'Unknown')} · @${esc(report.reporter?.username || 'unknown')}</b></div>
+            <div><small>Target type</small><b>${targetLabel}</b></div>
+            <div><small>Status</small><b>${esc(report.status)}</b></div>
+            ${report.story ? `<div><small>Story author</small><b>${esc(report.story.author?.display_name || 'Unknown')} · @${esc(report.story.author?.username || 'unknown')}</b></div><div><small>Story state</small><b>${esc(report.story.status)}</b></div>` : ''}
+          </div>
+          ${report.comment ? `<div class="reported-content"><small>Reported comment</small><p>${esc(report.comment.body)}</p></div>` : ''}
+          <div class="row-actions">
+            ${targetLink ? `<a class="btn" href="${targetLink}">Open ${targetLabel.toLowerCase()} and story</a>` : '<span class="btn disabled">Content no longer available</span>'}
+            <button data-admin="report-status" data-id="${report.id}" data-value="reviewing">Mark reviewing</button>
+            <button data-admin="report-status" data-id="${report.id}" data-value="resolved">Resolve</button>
+            <button data-admin="report-status" data-id="${report.id}" data-value="dismissed">Dismiss</button>
+          </div>
+        </div>
+      </details>
+    `;
+  }).join('');
   return `
     <div class="page admin-shell">
       <aside class="admin-side">
@@ -748,8 +880,10 @@ async function route() {
       $('#app').innerHTML = auth(arg);
     } else if (page === 'reset-password') {
       $('#app').innerHTML = resetPassword();
-    } else if (page === 'privacy' || page === 'terms') {
+    } else if (page === 'privacy' || page === 'terms' || page === 'rules') {
       $('#app').innerHTML = legal(page);
+    } else if (page === 'helping-panel') {
+      $('#app').innerHTML = helpCenter();
     } else {
       await refresh();
       $('#app').innerHTML = home();
@@ -835,6 +969,31 @@ async function loadComments() {
 function bind() {
   startHeroRotation();
   requestAnimationFrame(() => $$('.reveal').forEach(card => card.classList.add('seen')));
+
+  $$('[data-story-url]').forEach(storyCard => {
+    storyCard.onclick = event => {
+      if (event.target.closest('button, a, input, select, textarea')) return;
+      location.hash = storyCard.dataset.storyUrl;
+    };
+    storyCard.onkeydown = event => {
+      if ((event.key === 'Enter' || event.key === ' ') && event.target === storyCard) {
+        event.preventDefault();
+        location.hash = storyCard.dataset.storyUrl;
+      }
+    };
+  });
+
+  $$('.openHelp').forEach(button => { button.onclick = openHelpModal; });
+  $('#helpForm')?.addEventListener('submit', event => {
+    event.preventDefault();
+    const type = $('#helpType').value;
+    const subject = $('#helpSubject').value.trim();
+    const message = $('#helpMessage').value.trim();
+    const emailSubject = `[Storyteller ${type}] ${subject}`;
+    const emailBody = `${message}\n\nPage: ${location.href}\nSigned in: ${session ? 'Yes' : 'No'}`;
+    location.href = `mailto:kabirsayed.k@gmail.com?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    toast('Your email app is ready');
+  });
 
   $$('.save,.bookmark').forEach(button => {
     button.onclick = async event => {
@@ -1073,6 +1232,7 @@ async function adminAction(button) {
     else if (action === 'hide-comment') await StoryAPI.adminUpdate('comments', id, { is_hidden: value });
     else if (action === 'delete-comment') await StoryAPI.adminDelete('comments', id);
     else if (action === 'resolve') await StoryAPI.adminUpdate('reports', id, { status: 'resolved' });
+    else if (action === 'report-status') await StoryAPI.adminUpdate('reports', id, { status: button.dataset.value });
     toast('Admin change saved');
     route();
   } catch (error) {
@@ -1204,6 +1364,19 @@ function toast(message) {
 }
 
 const overlay = $('#search');
+const helpOverlay = $('#helpOverlay');
+const openHelpModal = () => {
+  helpOverlay.classList.add('open');
+  helpOverlay.setAttribute('aria-hidden', 'false');
+  $('#closeHelp')?.focus();
+};
+const closeHelpModal = () => {
+  helpOverlay.classList.remove('open');
+  helpOverlay.setAttribute('aria-hidden', 'true');
+};
+$('#helpBtn').onclick = openHelpModal;
+$('#closeHelp').onclick = closeHelpModal;
+helpOverlay.onclick = event => event.target === helpOverlay && closeHelpModal();
 $('#searchBtn').onclick = () => {
   overlay.classList.add('open');
   $('#searchInput').focus();
@@ -1263,7 +1436,10 @@ if (localStorage.theme === 'light') document.body.classList.add('light');
 syncChromeIcons();
 
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') overlay.classList.remove('open');
+  if (event.key === 'Escape') {
+    overlay.classList.remove('open');
+    closeHelpModal();
+  }
   if ((event.ctrlKey || event.metaKey) && event.key === 's') {
     event.preventDefault();
     $('.saveDraft')?.click();
@@ -1272,6 +1448,7 @@ document.addEventListener('keydown', event => {
 
 addEventListener('hashchange', () => {
   overlay.classList.remove('open');
+  closeHelpModal();
   $('#notifications').classList.remove('open');
   route();
 });

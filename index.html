@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20260722-6">
+<link rel="stylesheet" href="css/styles.css?v=20260722-7">
 <link rel="stylesheet" href="css/human-verification.css?v=20260722-1">
 <link rel="manifest" href="manifest.json">
 </head>
@@ -36,6 +36,7 @@
     <button id="searchBtn" class="icon-btn" aria-label="Search"></button>
     <button id="bell" class="icon-btn" aria-label="Notifications"></button>
     <button id="theme" class="icon-btn" aria-label="Change theme"></button>
+    <button id="helpBtn" class="icon-btn help-trigger" aria-label="Open help">?</button>
     <button id="navAvatar" class="avatar" aria-label="Open profile">ST</button>
   </div>
 </header>
@@ -44,6 +45,19 @@
   <div class="search-panel">
     <label>Search<input id="searchInput" placeholder="Search stories, authors, tags..."><kbd>ESC</kbd></label>
     <div id="results"></div>
+  </div>
+</div>
+<div id="helpOverlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="helpTitle" aria-hidden="true">
+  <div class="help-modal">
+    <button id="closeHelp" class="help-close" aria-label="Close help">&times;</button>
+    <span class="eyebrow">Need a hand?</span>
+    <h2 id="helpTitle">Help is close by.</h2>
+    <p>Ask a question, report a problem, or suggest an improvement.</p>
+    <a class="help-email" href="mailto:kabirsayed.k@gmail.com">kabirsayed.k@gmail.com</a>
+    <div class="buttons">
+      <a class="btn primary" href="#helping-panel">Open Help Centre</a>
+      <a class="btn" href="mailto:kabirsayed.k@gmail.com">Send email</a>
+    </div>
   </div>
 </div>
 <aside id="notifications">
@@ -57,8 +71,8 @@
 <script src="vendor/supabase-2.110.7.min.js"></script>
 <script src="vendor/dompurify-3.4.12.min.js"></script>
 <script src="js/config.js"></script>
-<script src="js/supabase-service.js?v=20260722-5"></script>
-<script src="js/app-v2.js?v=20260722-5"></script>
+<script src="js/supabase-service.js?v=20260722-6"></script>
+<script src="js/app-v2.js?v=20260722-6"></script>
 <script src="js/human-verification.js?v=20260722-2"></script>
 </body>
 </html>
