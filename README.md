@@ -28,6 +28,7 @@ Storyteller is a responsive writing and reading platform built as a static singl
 - Reader mode, likes, bookmarks, comments, sharing, reports, and reading history
 - Public writer profiles, global avatars, follows, and notifications
 - Responsive dark and light themes
+- Session-only human-verification gate with 512 local sentence combinations and typing-rhythm checks
 - Role-protected administration for stories, users, comments, reports, and metrics
 - Rate-limited view counting through a Supabase Edge Function
 
@@ -50,19 +51,22 @@ The frontend has no build step. Browser dependencies are pinned and self-hosted 
 
 ```text
 .
-??? assets/                  Brand and hero artwork
-??? css/styles.css           Responsive design system
-??? js/
-?   ??? app-v2.js            UI, routing, editor, and interactions
-?   ??? config.js            Public Supabase browser configuration
-?   ??? frame-guard.js       Clickjacking fallback protection
-?   ??? supabase-service.js  Data-access layer
-??? supabase/
-?   ??? functions/           Protected view-count Edge Function
-?   ??? migrations/          Ordered production database migrations
-??? vendor/                  Pinned browser dependencies
-??? index.html               Application shell and CSP
-??? manifest.json            Installable web-app metadata
+|-- assets/                       Brand and hero artwork
+|-- css/
+|   |-- styles.css                Responsive design system
+|   `-- human-verification.css    Verification-gate presentation
+|-- js/
+|   |-- app-v2.js                 UI, routing, editor, and interactions
+|   |-- config.js                 Public Supabase browser configuration
+|   |-- frame-guard.js            Clickjacking fallback protection
+|   |-- human-verification.js     Session-only verification logic
+|   `-- supabase-service.js       Data-access layer
+|-- supabase/
+|   |-- functions/                Protected view-count Edge Function
+|   `-- migrations/               Ordered production database migrations
+|-- vendor/                       Pinned browser dependencies
+|-- index.html                    Application shell and CSP
+`-- manifest.json                 Installable web-app metadata
 ```
 
 ## Local development
@@ -91,6 +95,11 @@ supabase functions deploy record-story-view --no-verify-jwt
 
 `SUPABASE_SERVICE_ROLE_KEY`, `VIEW_COUNT_SALT`, database passwords, and access tokens must never be placed in browser code or committed to Git. Hosted Supabase functions receive server credentials through protected environment variables.
 
+## Human verification
+
+The entry gate is built entirely with local HTML, CSS, and vanilla JavaScript. It combines 512 unique sentence combinations with a minimum reading delay, exact character matching, typing-speed checks, and typing-rhythm checks. A successful result is remembered only in `sessionStorage`, so it lasts for the current browser tab session.
+
+This feature adds friction for basic automation; it is not a security boundary because all client-side code can be inspected or bypassed. Authorization, ownership, roles, and protected data remain enforced by Supabase Row Level Security and server-side functions.
 ## Security
 
 - Row Level Security enforces ownership and administration in Postgres, not only in the UI.
