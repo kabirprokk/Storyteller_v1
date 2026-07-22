@@ -350,9 +350,9 @@ function reader(story) {
             <div class="meta">${esc(story.date)} · ${esc(story.time)} · ${story.views} views</div>
           </div>
           <div class="author-actions">
-            ${session && session.user.id === story.authorId
+            ${story.isOwn || (session && session.user.id === story.authorId)
               ? '<span class="btn disabled">Your story</span>'
-              : `<button class="btn followAuthor" data-id="${story.authorId}">Follow</button>`}
+              : `<button class="btn followAuthor" data-username="${esc(story.username)}">Follow</button>`}
             ${isPublished ? '<button class="btn reportStory">Report</button>' : '<span class="btn disabled">Private draft</span>'}
           </div>
         </div>
@@ -821,9 +821,9 @@ async function loadComments() {
   $('#commentList').innerHTML = rows.length
     ? rows.map(comment => `
         <div class="notice">
-          ${avatarMarkup(comment.profiles.avatar_url, comment.profiles.display_name[0])}
+          ${avatarMarkup(comment.author_avatar_url || comment.profiles?.avatar_url, (comment.author_name || comment.profiles?.display_name)?.[0])}
           <p>
-            <b>${esc(comment.profiles.display_name)}</b>
+            <b>${esc(comment.author_name || comment.profiles?.display_name)}</b>
             <small>${new Date(comment.created_at).toLocaleDateString()}</small>
             <span>${esc(comment.body)}</span>
           </p>
@@ -873,10 +873,9 @@ function bind() {
   $('.followAuthor')?.addEventListener('click', async event => {
     try {
       const button = event.currentTarget;
-      const targetId = button?.dataset.id;
-      if (!targetId) return toast('Writer not available');
-      if (session && session.user.id === targetId) return toast('You cannot follow yourself');
-      const following = await StoryAPI.follow(targetId);
+      const targetUsername = button?.dataset.username;
+      if (!targetUsername) return toast('Writer not available');
+      const following = await StoryAPI.follow(targetUsername);
       if (button) button.textContent = following ? 'Following' : 'Follow';
       toast(following ? 'Author followed' : 'Author unfollowed');
     } catch (error) {
@@ -1042,7 +1041,7 @@ async function saveProfile() {
       ...(avatar && { avatar_url: avatar }),
     });
 
-    stories = stories.map(story => story.authorId === updatedProfile.id ? {
+    stories = stories.map(story => story.authorId === updatedProfile.id || story.isOwn ? {
       ...story,
       author: updatedProfile.display_name,
       username: updatedProfile.username,
@@ -1236,7 +1235,7 @@ $('#bell').onclick = async () => {
     $('#notificationList').innerHTML = items.length
       ? items.map(notification => `
           <div class="notice">
-            ${avatarMarkup(notification.actor?.avatar_url, notification.actor?.display_name?.[0] || 'S')}
+            ${avatarMarkup(notification.actor_avatar_url || notification.actor?.avatar_url, (notification.actor_name || notification.actor?.display_name)?.[0] || 'S')}
             <p>
               <b>${esc(notification.message || notification.kind)}</b>
               <small>${new Date(notification.created_at).toLocaleString()}</small>
@@ -1259,6 +1258,7 @@ $('#markRead').onclick = async () => {
 };
 
 $('#theme').onclick = () => toggleTheme();
+$('#navAvatar').onclick = () => { location.hash = session ? 'profile' : 'auth/signin'; };
 if (localStorage.theme === 'light') document.body.classList.add('light');
 syncChromeIcons();
 

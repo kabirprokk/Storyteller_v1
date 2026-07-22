@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b0b0b">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://syemkwyfefzdmogtsvmi.supabase.co; connect-src 'self' https://syemkwyfefzdmogtsvmi.supabase.co wss://syemkwyfefzdmogtsvmi.supabase.co; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests">
+<style id="antiClickjack">body{display:none!important}</style>
+<script src="js/frame-guard.js?v=20260722-5"></script>
 <meta name="description" content="Storyteller — stories that stay with you.">
 <title>STORYTELLER</title>
 <link rel="icon" type="image/png" href="assets/storyteller-mark.png">
@@ -11,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20260722-4">
+<link rel="stylesheet" href="css/styles.css?v=20260722-5">
 <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -30,7 +33,7 @@
     <button id="searchBtn" class="icon-btn" aria-label="Search"></button>
     <button id="bell" class="icon-btn" aria-label="Notifications"></button>
     <button id="theme" class="icon-btn" aria-label="Change theme"></button>
-    <button id="navAvatar" class="avatar" aria-label="Open profile" onclick="location.hash='profile'">ST</button>
+    <button id="navAvatar" class="avatar" aria-label="Open profile">ST</button>
   </div>
 </header>
 <main id="app"></main>
@@ -48,10 +51,10 @@
   <div id="notificationList"></div>
 </aside>
 <div id="toast" role="status"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<script src="vendor/supabase-2.110.7.min.js"></script>
+<script src="vendor/dompurify-3.4.12.min.js"></script>
 <script src="js/config.js"></script>
-<script src="js/supabase-service.js?v=20260722-3"></script>
-<script src="js/app-v2.js?v=20260722-4"></script>
+<script src="js/supabase-service.js?v=20260722-5"></script>
+<script src="js/app-v2.js?v=20260722-5"></script>
 </body>
 </html>
