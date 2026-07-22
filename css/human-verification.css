@@ -103,8 +103,8 @@ body.verification-locked>#notifications{pointer-events:none;user-select:none}
 [data-human-note]{order:6;margin:0;color:var(--muted);font-size:10px}
 [data-human-decoy]{display:none!important}
 
-body.light [data-human-gate]{background:radial-gradient(circle at 18% 8%,rgba(217,95,53,.12),transparent 31%),rgba(250,248,244,.96)}
-body.light [data-human-card]{box-shadow:0 38px 120px rgba(38,29,20,.16)}
+body.light [data-human-gate]{background:radial-gradient(circle at 16% 5%,rgba(177,118,46,.16),transparent 34%),rgba(247,243,236,.98)}
+body.light [data-human-card]{border-color:rgba(52,40,27,.14);box-shadow:0 38px 120px rgba(77,53,22,.15)}
 
 @media(max-width:560px){
   [data-human-gate]{padding:12px;align-items:end}
