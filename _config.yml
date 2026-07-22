@@ -2,7 +2,6 @@
 # These files remain version-controlled but must not be copied into the public site artifact.
 exclude:
   - supabase
-  - SECURITY.md
   - .github
   - .gitignore
 
