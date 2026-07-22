@@ -1048,6 +1048,7 @@ async function saveProfile() {
       authorAvatar: updatedProfile.avatar_url || '',
       ini: updatedProfile.display_name.split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase(),
     } : story);
+    await syncNavbarAvatar(updatedProfile);
     toast('Profile updated');
     route();
   } catch (error) {
@@ -1143,6 +1144,29 @@ function syncChromeIcons() {
   $('#searchBtn') && ($('#searchBtn').innerHTML = icons.search);
   $('#bell') && ($('#bell').innerHTML = `${icons.bell}<i></i>`);
   $('#theme') && ($('#theme').innerHTML = icons.theme);
+}
+
+async function syncNavbarAvatar(profile = null) {
+  const button = $('#navAvatar');
+  if (!button) return;
+  if (!session) {
+    button.textContent = 'ST';
+    button.title = 'Sign in or create an account';
+    return;
+  }
+
+  const userId = session.user.id;
+  try {
+    const person = profile || await StoryAPI.profile();
+    if (!person || session?.user.id !== userId) return;
+    const initials = person.display_name?.split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase() || 'ST';
+    button.innerHTML = person.avatar_url
+      ? `<img src="${esc(person.avatar_url)}" alt="${esc(person.display_name || 'Your profile')}">`
+      : esc(initials);
+    button.title = person.display_name || 'Open profile';
+  } catch (error) {
+    console.error('Unable to load navbar avatar', error);
+  }
 }
 
 function authFail(error) {
@@ -1269,13 +1293,16 @@ addEventListener('scroll', () => {
     session = await StoryAPI.session();
     await refresh();
     adminMode = session ? await StoryAPI.isAdmin() : false;
+    await syncNavbarAvatar();
     StoryAPI.onAuthChange(async (nextSession, event) => {
       session = nextSession;
       adminMode = nextSession ? await StoryAPI.isAdmin() : false;
+      await syncNavbarAvatar();
       if (event === 'PASSWORD_RECOVERY') location.hash = 'reset-password';
       route();
     });
   }
 
+  if (!StoryAPI.configured) await syncNavbarAvatar();
   route();
 })();
