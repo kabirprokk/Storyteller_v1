@@ -17,7 +17,7 @@
   const normalize = row => ({
     id: row.id, slug: row.slug, title: row.title, desc: row.subtitle || '',
     author: row.profiles?.display_name || 'Unknown writer', ini: (row.profiles?.display_name || 'ST').split(/\s+/).map(x => x[0]).slice(0,2).join('').toUpperCase(),
-    authorId: row.author_id, username: row.profiles?.username, cat: row.categories?.name || 'Uncategorized',
+    authorId: row.author_id, username: row.profiles?.username, authorAvatar: row.profiles?.avatar_url || '', cat: row.categories?.name || 'Uncategorized',
     categoryId: row.category_id, time: `${row.reading_minutes || 1} min read`, likes: row.likes?.[0]?.count || 0,
     views: row.view_count || 0, date: row.published_at ? new Date(row.published_at).toLocaleDateString(undefined,{month:'short',day:'numeric'}) : 'Draft',
     publishedAt: row.published_at || null,

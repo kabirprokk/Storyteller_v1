@@ -36,6 +36,9 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
 const stripHtml = value => String(value ?? '').replace(/<[^>]*>/g, ' ');
 const words = value => String(value ?? '').trim().split(/\s+/).filter(Boolean).length;
 const img = story => esc(story?.cover || 'assets/hero.png');
+const avatarMarkup = (url, initials, tone = '') => `<i class="avatar ${tone}">${url
+  ? `<img src="${esc(url)}" alt="" loading="lazy">`
+  : esc(initials || 'ST')}</i>`;
 
 const titleFromFilename = name => {
   const base = String(name || '').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -133,7 +136,7 @@ const card = story => `
     <h3><a href="#story/${encodeURIComponent(story.slug)}">${esc(story.title)}</a></h3>
     <p>${esc(story.desc)}</p>
     <div class="between meta">
-      <span class="author"><i class="avatar peach">${esc(story.ini)}</i>${esc(story.author)}</span>
+      <span class="author">${avatarMarkup(story.authorAvatar, story.ini, 'peach')}${esc(story.author)}</span>
       <span>${esc(story.time)} · Like ${story.likes}</span>
     </div>
   </article>
@@ -235,7 +238,7 @@ function home() {
                   <span class="eyebrow">${esc(featured.cat)} · ${esc(featured.time)}</span>
                   <h2>${esc(featured.title)}</h2>
                   <p>${esc(featured.desc)}</p>
-                  <span class="author"><i class="avatar peach">${esc(featured.ini)}</i>${esc(featured.author)}</span>
+                  <span class="author">${avatarMarkup(featured.authorAvatar, featured.ini, 'peach')}${esc(featured.author)}</span>
                 </div>
               </a>
               <div class="ranks">
@@ -341,7 +344,7 @@ function reader(story) {
 
       <div class="reader-meta">
         <div class="byline">
-          <span class="avatar peach">${esc(story.ini)}</span>
+          ${avatarMarkup(story.authorAvatar, story.ini, 'peach')}
           <div>
             <b>${esc(story.author)}</b>
             <div class="meta">${esc(story.date)} · ${esc(story.time)} · ${story.views} views</div>
@@ -817,7 +820,7 @@ async function loadComments() {
   $('#commentList').innerHTML = rows.length
     ? rows.map(comment => `
         <div class="notice">
-          <span class="avatar">${esc(comment.profiles.display_name[0])}</span>
+          ${avatarMarkup(comment.profiles.avatar_url, comment.profiles.display_name[0])}
           <p>
             <b>${esc(comment.profiles.display_name)}</b>
             <small>${new Date(comment.created_at).toLocaleDateString()}</small>
@@ -1031,13 +1034,20 @@ async function saveProfile() {
     const file = $('#profileAvatar').files[0];
     if (file) avatar = await StoryAPI.uploadAvatar(file);
 
-    await StoryAPI.updateProfile({
+    const updatedProfile = await StoryAPI.updateProfile({
       display_name: $('#profileName').value.trim(),
       username: $('#profileUsername').value.trim().toLowerCase(),
       bio: $('#profileBio').value.trim(),
       ...(avatar && { avatar_url: avatar }),
     });
 
+    stories = stories.map(story => story.authorId === updatedProfile.id ? {
+      ...story,
+      author: updatedProfile.display_name,
+      username: updatedProfile.username,
+      authorAvatar: updatedProfile.avatar_url || '',
+      ini: updatedProfile.display_name.split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase(),
+    } : story);
     toast('Profile updated');
     route();
   } catch (error) {
@@ -1199,7 +1209,7 @@ $('#bell').onclick = async () => {
     $('#notificationList').innerHTML = items.length
       ? items.map(notification => `
           <div class="notice">
-            <span class="avatar">${esc(notification.actor?.display_name?.[0] || 'S')}</span>
+            ${avatarMarkup(notification.actor?.avatar_url, notification.actor?.display_name?.[0] || 'S')}
             <p>
               <b>${esc(notification.message || notification.kind)}</b>
               <small>${new Date(notification.created_at).toLocaleString()}</small>
