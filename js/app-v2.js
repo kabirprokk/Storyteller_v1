@@ -195,6 +195,7 @@ function home() {
     .filter(story => story.status === 'published')
     .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
   const featured = published.find(story => story.featured) || null;
+  const heroStory = featured || published[0] || null;
   const recent = published.slice(0, 6);
   const trending = [...published].sort((a, b) => b.views - a.views).slice(0, 5);
 
