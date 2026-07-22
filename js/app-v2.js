@@ -376,6 +376,7 @@ function reader(story) {
             ${story.isOwn || (session && session.user.id === story.authorId)
               ? '<span class="btn disabled">Your story</span>'
               : `<button class="btn followAuthor" data-username="${esc(story.username)}">Follow</button>`}
+            ${story.authorDonationQr && !(story.isOwn || (session && session.user.id === story.authorId)) ? `<button class="btn openWriterDonation" data-qr="${esc(story.authorDonationQr)}" data-writer="${esc(story.author)}"><span aria-hidden="true">&#9825;</span> Support writer</button>` : ''}
             ${isPublished ? '<button class="btn reportStory">Report</button>' : '<span class="btn disabled">Private draft</span>'}
           </div>
         </div>
@@ -568,6 +569,17 @@ async function profile(tab = 'published') {
         <div class="field"><label>Bio</label><textarea id="profileBio" maxlength="500">${esc(me.bio)}</textarea></div>
         <div class="field"><label>Avatar</label><input id="profileAvatar" type="file" accept="image/jpeg,image/png,image/webp"></div>
         <button class="btn primary saveProfile">Save profile</button>
+        <div class="writer-donation-settings">
+          <div>
+            <span class="eyebrow">Reader support</span>
+            <h3>Writer donation QR</h3>
+            <p>Let readers support your work directly. Uploading a QR makes a “Support writer” button appear on your published stories.</p>
+            <label class="qr-upload"><span>Choose QR image</span><input id="writerDonationQrFile" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            <button id="saveWriterDonationQr" class="btn" type="button">${me.donation_qr_url ? 'Replace QR code' : 'Add QR code'}</button>
+            ${me.donation_qr_url ? '<button id="removeWriterDonationQr" class="btn danger" type="button">Remove QR</button>' : ''}
+          </div>
+          <div class="writer-qr-preview">${me.donation_qr_url ? `<img src="${esc(me.donation_qr_url)}" alt="Your current writer donation QR code"><small>Visible to readers</small>` : '<strong>Not enabled</strong><small>No QR code is public</small>'}</div>
+        </div>
       </div>
 
       <section>
@@ -610,6 +622,7 @@ function legal(kind) {
         ['Information we collect', 'Account information includes your email address, authentication identifiers, display name, username, biography, avatar and account status. Activity information includes stories, drafts, comments, likes, bookmarks, follows, reports, notifications and reading history. Basic technical information may be processed by our hosting and database providers to deliver and protect the service.'],
         ['How information is used', 'We use information to create and secure accounts, publish and organize stories, maintain your library, provide social features, investigate reports, prevent abuse, support users and improve Storyteller. We do not sell personal information.'],
         ['Public information', 'Published stories, public profile fields, visible comments and aggregate engagement counts can be viewed by other visitors. Drafts, bookmarks, reading history, notifications, account roles and suspension state are not intentionally exposed to the public.'],
+        ['Donation QR codes and payments', 'Publishing a writer donation QR is optional. If you enable it, the QR image becomes public on your stories and may contain a payment identifier chosen by you. Storyteller does not process donations, receive transaction details or verify payments. Payments occur in the reader’s payment app under that provider’s terms.'],
         ['Storage and service providers', 'Supabase provides authentication, database, Edge Function and media-storage infrastructure. GitHub Pages hosts the static website. Email messages you choose to send are handled by your email provider and Gmail. Each provider processes limited information under its own terms and privacy practices.'],
         ['Browser storage', 'Storyteller uses browser storage for authentication sessions, theme preferences and the current-tab human-verification state. Clearing site data or signing out removes or invalidates applicable local state.'],
         ['Security and retention', 'We use database access policies, minimized public views, content sanitization and restricted administrative functions. No online service can guarantee absolute security. Information is retained while needed to provide the service, meet security or moderation needs, resolve disputes and comply with applicable obligations.'],
@@ -629,6 +642,7 @@ function legal(kind) {
         ['Your responsibilities', 'Publish only material you have the right to share. Do not post unlawful, threatening, deceptive, hateful, exploitative, plagiarized, privacy-violating or malicious content. Do not attack the service, scrape protected data, manipulate engagement, impersonate others or interfere with another user.'],
         ['Moderation and reports', 'Administrators may review reports, restrict visibility, remove content, change featured status, suspend accounts or permanently delete accounts when reasonably necessary to protect users, enforce these terms or comply with law. Reports must be made honestly and must not be used for harassment.'],
         ['Copyright and complaints', 'If you believe content violates your rights, send a detailed notice identifying the work, the Storyteller content, your contact information and a good-faith explanation. False or abusive notices may lead to restrictions.'],
+        ['Direct donations', 'Donation QR codes are optional links between readers and writers. Storyteller does not process, hold, guarantee, refund or resolve these payments and does not verify the recipient displayed by a payment app. Readers must confirm the recipient and amount before paying. Writers are responsible for the QR they publish and for applicable tax, disclosure and legal obligations.'],
         ['Service availability', 'Storyteller may change, pause or discontinue features. We work to keep the service reliable but provide it on an “as available” basis without a guarantee of uninterrupted operation or permanent storage. Keep copies of important work.'],
         ['Liability', 'To the extent permitted by applicable law, Storyteller and its administrator are not responsible for indirect losses, user-generated content, third-party services or events outside reasonable control. Nothing here excludes rights that cannot legally be excluded.'],
         ['Termination and changes', 'You may stop using Storyteller at any time. We may restrict or terminate access for serious or repeated violations. Terms may be updated when the product, risks or legal requirements change; the current version will remain available here.'],
@@ -1202,6 +1216,24 @@ $('#comment')?.addEventListener('click', async () => {
 
   $('.editProfile')?.addEventListener('click', () => { $('.profile-editor').hidden = !$('.profile-editor').hidden; });
   $('.saveProfile')?.addEventListener('click', saveProfile);
+  $('#saveWriterDonationQr')?.addEventListener('click', async event => {
+    const file = $('#writerDonationQrFile')?.files?.[0];
+    if (!file) return toast('Choose a QR image');
+    const button = event.currentTarget;
+    try {
+      button.disabled = true;
+      button.textContent = 'Uploading...';
+      await StoryAPI.uploadWriterDonationQr(file);
+      toast('Writer donation QR published');
+      await route();
+    } catch (error) { authFail(error); }
+    finally { if (button.isConnected) button.disabled = false; }
+  });
+  $('#removeWriterDonationQr')?.addEventListener('click', async () => {
+    if (!confirm('Remove your public donation QR code?')) return;
+    try { await StoryAPI.clearWriterDonationQr(); toast('Writer donation QR removed'); await route(); }
+    catch (error) { authFail(error); }
+  });
   $('.signOut')?.addEventListener('click', async () => {
     await StoryAPI.signOut();
     location.hash = 'home';
@@ -1475,14 +1507,16 @@ const closeDonationModal = () => {
   donationOverlay.classList.remove('open');
   donationOverlay.setAttribute('aria-hidden', 'true');
 };
-const openDonationModal = async () => {
+const openDonationModal = async (qrUrl = '', recipient = 'the developer') => {
   donationOverlay.classList.add('open');
   donationOverlay.setAttribute('aria-hidden', 'false');
-  $('#donationContent').innerHTML = '<p>Your support will help keep Storyteller independent and improve the reading and writing experience.</p><strong class="coming-soon">Coming soon...</strong>';
+  $('#donationTitle').textContent = recipient === 'the developer' ? 'Donate to the developer.' : `Support ${recipient}.`;
+  $('#donationContent').innerHTML = '<p>Your support helps independent stories and the people who create them.</p><strong class="coming-soon">Coming soon...</strong>';
   $('#closeDonation')?.focus();
-  const setting = await StoryAPI.donationConfig();
-  if (!setting?.qr_url || !donationOverlay.classList.contains('open')) return;
-  $('#donationContent').innerHTML = `<p>Scan this QR code with your preferred payment app. Your donation goes directly to the developer.</p><div class="donation-qr"><img src="${esc(setting.qr_url)}" alt="Donation payment QR code"><small>Verify the recipient in your payment app before confirming.</small></div>`;
+  let publicQr = qrUrl;
+  if (!publicQr) publicQr = (await StoryAPI.donationConfig())?.qr_url || '';
+  if (!publicQr || !donationOverlay.classList.contains('open')) return;
+  $('#donationContent').innerHTML = `<p>Scan this QR code with your preferred payment app. Your donation goes directly to ${esc(recipient)}.</p><div class="donation-qr"><img src="${esc(publicQr)}" alt="Donation payment QR code for ${esc(recipient)}"><small>Verify the recipient in your payment app before confirming.</small></div>`;
 };
 const openHelpModal = () => {
   helpOverlay.classList.add('open');
@@ -1501,6 +1535,12 @@ $('#closeDonation').onclick = closeDonationModal;
 helpOverlay.onclick = event => event.target === helpOverlay && closeHelpModal();
 donationOverlay.onclick = event => event.target === donationOverlay && closeDonationModal();
 document.addEventListener('click', event => {
+  const writerDonationAction = event.target.closest('.openWriterDonation');
+  if (writerDonationAction) {
+    event.preventDefault();
+    openDonationModal(writerDonationAction.dataset.qr || '', writerDonationAction.dataset.writer || 'this writer');
+    return;
+  }
   const donationAction = event.target.closest('.openDonation');
   if (donationAction) {
     event.preventDefault();
