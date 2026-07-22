@@ -8,6 +8,195 @@
   const SESSION_KEY = 'storyteller.humanVerified.v1';
   const MINIMUM_WAIT_MS = 5000;
   const MAX_FAILURES = 3;
+  // Conservative thresholds: one unusual signal can never fail a legitimate user.
+  const BEHAVIOR_CONFIG = Object.freeze({
+    startingScore: 100,
+    passingScore: 60,
+    maximumSamples: 240,
+    minimumPointerSamples: 8,
+    minimumInteractionMs: 5000,
+    immediatePointerMs: 12,
+    pointerPauseMs: 140,
+    minimumPointerPathPx: 80,
+    straightPathRatio: .995,
+    minimumSpeedVariation: .08,
+    minimumAccelerationVariation: .06,
+    minimumAccelerationSamples: 4,
+    minimumDirectionChanges: 2,
+    directionChangeRadians: .12,
+    minimumPointerTimingVariation: .025,
+    minimumPointerTimingIntervals: 9,
+    minimumKeyIntervals: 8,
+    minimumKeyAverageMs: 28,
+    minimumKeyVariation: .045,
+    minimumScrollIntervals: 5,
+    minimumScrollTimingVariation: .025,
+    minimumScrollDistanceVariation: .02,
+    maximumFocusChanges: 4,
+    maximumHiddenChanges: 2,
+  });
+
+  const coefficientOfVariation = values => {
+    if (values.length < 2) return 0;
+    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+    if (!average) return 0;
+    const variance = values.reduce((sum, value) => sum + ((value - average) ** 2), 0) / values.length;
+    return Math.sqrt(variance) / average;
+  };
+
+  // Collects ephemeral geometry and timing only while the verification gate exists.
+  // Samples remain in memory and are never stored, logged, fingerprinted, or transmitted.
+  function createBehaviorAnalyzer(gate) {
+    const config = BEHAVIOR_CONFIG;
+    const controller = new AbortController();
+    const options = { passive: true, signal: controller.signal };
+    const startedAt = performance.now();
+    const state = {
+      active: true,
+      firstInteractionAt: null,
+      firstPointerAt: null,
+      pointers: [],
+      keyTimes: [],
+      scrollTimes: [],
+      scrollDistances: [],
+      focusChanges: 0,
+      hiddenChanges: 0,
+    };
+
+    const markInteraction = time => {
+      if (state.firstInteractionAt === null) state.firstInteractionAt = time;
+    };
+    const addLimited = (collection, value) => {
+      if (collection.length < config.maximumSamples) collection.push(value);
+    };
+
+    const collectPointer = event => {
+      if (!state.active || !event.isTrusted || event.isPrimary === false) return;
+      const time = performance.now();
+      markInteraction(time);
+      if (state.firstPointerAt === null) state.firstPointerAt = time;
+      addLimited(state.pointers, { x: event.clientX, y: event.clientY, time });
+    };
+    const collectKey = event => {
+      if (!state.active || !event.isTrusted || event.repeat || event.key.length !== 1) return;
+      const time = performance.now();
+      markInteraction(time);
+      addLimited(state.keyTimes, time);
+    };
+    const collectScroll = event => {
+      if (!state.active || !event.isTrusted) return;
+      const time = performance.now();
+      markInteraction(time);
+      addLimited(state.scrollTimes, time);
+      addLimited(state.scrollDistances, Math.abs(event.deltaY || event.deltaX || 0));
+    };
+    const collectFocusChange = () => {
+      if (!state.active) return;
+      state.focusChanges += 1;
+      if (document.hidden) state.hiddenChanges += 1;
+    };
+
+    gate.addEventListener('pointermove', collectPointer, options);
+    gate.addEventListener('pointerdown', collectPointer, options);
+    gate.addEventListener('keydown', collectKey, options);
+    gate.addEventListener('wheel', collectScroll, options);
+    document.addEventListener('visibilitychange', collectFocusChange, options);
+    window.addEventListener('blur', collectFocusChange, options);
+
+    const pointerPenalty = () => {
+      const points = state.pointers;
+      if (points.length < config.minimumPointerSamples) return { value: 0, present: false };
+      const speeds = [];
+      const accelerations = [];
+      const directions = [];
+      const intervals = [];
+      let pathLength = 0;
+      let pauses = 0;
+
+      for (let index = 1; index < points.length; index += 1) {
+        const dx = points[index].x - points[index - 1].x;
+        const dy = points[index].y - points[index - 1].y;
+        const distance = Math.hypot(dx, dy);
+        const elapsed = Math.max(.1, points[index].time - points[index - 1].time);
+        pathLength += distance;
+        intervals.push(elapsed);
+        speeds.push(distance / elapsed);
+        if (elapsed >= config.pointerPauseMs) pauses += 1;
+        if (distance > 1) directions.push(Math.atan2(dy, dx));
+      }
+      for (let index = 1; index < speeds.length; index += 1) {
+        accelerations.push(Math.abs(speeds[index] - speeds[index - 1]));
+      }
+
+      let directionChanges = 0;
+      for (let index = 1; index < directions.length; index += 1) {
+        const change = Math.abs(Math.atan2(
+          Math.sin(directions[index] - directions[index - 1]),
+          Math.cos(directions[index] - directions[index - 1])
+        ));
+        if (change > config.directionChangeRadians) directionChanges += 1;
+      }
+
+      const directDistance = Math.hypot(points.at(-1).x - points[0].x, points.at(-1).y - points[0].y);
+      const pathRatio = pathLength ? directDistance / pathLength : 1;
+      let value = 0;
+      // Long perfectly straight paths lack the curves produced by a hand.
+      if (pathLength >= config.minimumPointerPathPx && pathRatio >= config.straightPathRatio) value += 7;
+      // Natural movement contains speed changes, acceleration, deceleration, and pauses.
+      if (coefficientOfVariation(speeds) < config.minimumSpeedVariation) value += 7;
+      if (accelerations.length >= config.minimumAccelerationSamples && coefficientOfVariation(accelerations) < config.minimumAccelerationVariation) value += 6;
+      if (pathLength >= config.minimumPointerPathPx && directionChanges < config.minimumDirectionChanges && pauses === 0) value += 5;
+      // Perfectly uniform browser event spacing can indicate pointer playback.
+      if (intervals.length >= config.minimumPointerTimingIntervals && coefficientOfVariation(intervals) < config.minimumPointerTimingVariation) value += 5;
+      return { value: Math.min(25, value), present: true };
+    };
+
+    const keyboardPenalty = () => {
+      const intervals = state.keyTimes.slice(1).map((time, index) => time - state.keyTimes[index]);
+      if (intervals.length < config.minimumKeyIntervals) return { value: 0, present: false };
+      const average = intervals.reduce((sum, value) => sum + value, 0) / intervals.length;
+      let value = 0;
+      // Extremely fast and near-identical timings are combined, not treated as one decisive signal.
+      if (average < config.minimumKeyAverageMs) value += 16;
+      if (coefficientOfVariation(intervals) < config.minimumKeyVariation) value += 14;
+      return { value: Math.min(30, value), present: true };
+    };
+
+    const scrollPenalty = () => {
+      const intervals = state.scrollTimes.slice(1).map((time, index) => time - state.scrollTimes[index]);
+      if (intervals.length < config.minimumScrollIntervals) return 0;
+      const uniformTiming = coefficientOfVariation(intervals) < config.minimumScrollTimingVariation;
+      const uniformDistance = coefficientOfVariation(state.scrollDistances) < config.minimumScrollDistanceVariation;
+      return uniformTiming && uniformDistance ? 8 : 0;
+    };
+
+    return {
+      passes() {
+        if (!state.active) return false;
+        const now = performance.now();
+        const pointer = pointerPenalty();
+        const keyboard = keyboardPenalty();
+        let score = config.startingScore - pointer.value - keyboard.value - scrollPenalty();
+        // Session observations are capped so no single signal can cause rejection.
+        if (now - startedAt < config.minimumInteractionMs) score -= 10;
+        if (state.firstInteractionAt === null) score -= 15;
+        if (state.firstPointerAt !== null && state.firstPointerAt - startedAt < config.immediatePointerMs) score -= 5;
+        if (state.focusChanges > config.maximumFocusChanges || state.hiddenChanges > config.maximumHiddenChanges) score -= 8;
+        // Keyboard-only and touch-only users remain valid; this applies only if both are absent.
+        if (matchMedia('(pointer:fine)').matches && !pointer.present && !keyboard.present) score -= 10;
+        return Math.max(0, Math.min(config.startingScore, score)) >= config.passingScore;
+      },
+      stop() {
+        if (!state.active) return;
+        state.active = false;
+        controller.abort();
+        state.pointers.length = 0;
+        state.keyTimes.length = 0;
+        state.scrollTimes.length = 0;
+        state.scrollDistances.length = 0;
+      },
+    };
+  }
 
   // Eight fragments in each group create 8 x 8 x 8 = 512 unique 18-20 word sentences.
   const OPENINGS = Object.freeze([
@@ -197,6 +386,15 @@
     let trustedCharacters = 0;
     let typingTimes = [];
     let countdownTimer = null;
+    const behaviorAnalyzer = createBehaviorAnalyzer(gate);
+    const gateObserver = new MutationObserver(() => {
+      if (!gate.isConnected) stopBehaviorAnalysis();
+    });
+    const stopBehaviorAnalysis = () => {
+      behaviorAnalyzer.stop();
+      gateObserver.disconnect();
+    };
+    gateObserver.observe(document.body, { childList: true, subtree: true });
 
     const blockTransfer = event => event.preventDefault();
     ['copy', 'cut', 'paste', 'drop', 'dragstart'].forEach(type => {
@@ -284,7 +482,7 @@
 
     const fail = () => {
       failures += 1;
-      const message = 'Verification failed. Try again.';
+      const message = 'Verification failed. Please try again.';
       if (failures >= MAX_FAILURES) {
         failures = 0;
         newChallenge(message);
@@ -320,12 +518,13 @@
     card.addEventListener('submit', event => {
       event.preventDefault();
       const waitedLongEnough = performance.now() - challengeStarted >= MINIMUM_WAIT_MS;
-      if (!waitedLongEnough || input.value !== sentence || !rhythmLooksHuman()) {
+      if (!waitedLongEnough || input.value !== sentence || !rhythmLooksHuman() || !behaviorAnalyzer.passes()) {
         fail();
         return;
       }
 
       clearInterval(countdownTimer);
+      stopBehaviorAnalysis();
       saveSessionVerification();
       gate.classList.add('is-leaving');
       gate.setAttribute('aria-hidden', 'true');

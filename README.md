@@ -97,9 +97,10 @@ supabase functions deploy record-story-view --no-verify-jwt
 
 ## Human verification
 
-The entry gate is built entirely with local HTML, CSS, and vanilla JavaScript. It combines 512 unique sentence combinations with a minimum reading delay, exact character matching, typing-speed checks, and typing-rhythm checks. A successful result is remembered only in `sessionStorage`, so it lasts for the current browser tab session.
+The entry gate is built entirely with local HTML, CSS, and vanilla JavaScript. It combines 512 unique sentence combinations with a minimum reading delay, exact character matching, typing-speed checks, typing-rhythm checks, and short-lived passive interaction analysis. Behavior samples remain only in memory and are discarded when the gate closes; a successful result is remembered only in `sessionStorage`, so it lasts for the current browser tab session.
 
 This feature adds friction for basic automation; it is not a security boundary because all client-side code can be inspected or bypassed. Authorization, ownership, roles, and protected data remain enforced by Supabase Row Level Security and server-side functions.
+
 ## Security
 
 - Row Level Security enforces ownership and administration in Postgres, not only in the UI.
