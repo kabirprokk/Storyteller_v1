@@ -496,6 +496,7 @@ function auth(mode = 'signin', msg = '') {
 async function profile(tab = 'published') {
   const me = await StoryAPI.profile();
   if (!me) return auth();
+  await syncNavbarAvatar(me);
 
   const mine = tab === 'published' ? await StoryAPI.myStories('published') : await StoryAPI.library(tab);
   const items = mine.map(story => {
