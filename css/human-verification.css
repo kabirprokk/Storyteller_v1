@@ -50,12 +50,12 @@ body.verification-locked>#notifications{pointer-events:none;user-select:none}
 
 [data-human-sentence-wrap]{order:2}
 [data-human-sentence]{
-  min-height:104px;
-  padding:22px;
+  min-height:78px;
+  padding:16px 18px;
   border:1px solid var(--line);
   border-radius:16px;
   background:linear-gradient(145deg,color-mix(in srgb,var(--card) 88%,#fff 3%),var(--bg));
-  font:400 clamp(21px,3.1vw,30px)/1.5 var(--serif);
+  font:400 clamp(15px,1.6vw,19px)/1.55 var(--serif);
   letter-spacing:.012em;
   user-select:none;
   -webkit-user-select:none;
@@ -111,7 +111,7 @@ body.light [data-human-card]{border-color:rgba(52,40,27,.14);box-shadow:0 38px 1
   [data-human-card]{width:100%;max-height:calc(100svh - 24px);overflow:auto;padding:27px 20px;border-radius:22px;gap:18px}
   [data-human-heading] h2{font-size:48px}
   [data-human-heading] p{font-size:13px}
-  [data-human-sentence]{min-height:112px;padding:17px;font-size:22px}
+  [data-human-sentence]{min-height:84px;padding:14px 15px;font-size:16px}
   [data-human-input]{min-height:54px}
   [data-human-controls]{align-items:stretch;flex-direction:column}
   [data-human-controls] .btn{width:100%}
