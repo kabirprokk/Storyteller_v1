@@ -9,6 +9,9 @@ let draftId = null;
 let editingStory = null;
 let browseState = { category: '', query: '', sort: 'latest' };
 let timer = null;
+let saveQueue = Promise.resolve();
+let readTimer = null;
+let filterRequest = 0;
 let adminMode = false;
 const logo = 'assets/storyteller-mark.png';
 const brand = `<img class="brand-mark" src="${logo}" alt="" aria-hidden="true"><span>STORYTELLER</span>`;
@@ -187,21 +190,25 @@ function setup() {
 }
 
 function home() {
-  const featured = stories.find(story => story.featured) || stories[0];
-  const recent = stories.slice(0, 6);
-  const trending = stories.slice(0, 5);
+  const published = [...stories]
+    .filter(story => story.status === 'published')
+    .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+  const featured = published.find(story => story.featured) || null;
+  const heroStory = featured || published[0] || null;
+  const recent = published.slice(0, 6);
+  const trending = [...published].sort((a, b) => b.views - a.views).slice(0, 5);
 
   return `
     <div class="page">
       <div class="hero">
-        <div class="hero-bg" ${featured ? `style="background-image:linear-gradient(90deg,#050505f5,#050505a6 48%,transparent 78%),linear-gradient(0deg,var(--bg),transparent 30%),url('${img(featured)}')"` : ''}></div>
+        <div class="hero-bg" ${heroStory ? `style="background-image:linear-gradient(90deg,#050505f5,#050505a6 48%,transparent 78%),linear-gradient(0deg,var(--bg),transparent 30%),url('${img(heroStory)}')"` : ''}></div>
         <div class="container">
           <div class="hero-copy">
             <span class="eyebrow">Stories that stay</span>
             <h1>Every Story<br>Deserves to Be <em>Told.</em></h1>
             <p>A home for honest voices, untold worlds, and the beautiful mess of being human.</p>
             <div class="buttons">
-              <a class="btn primary" href="${featured ? '#explore' : '#write'}">${featured ? 'Start reading' : 'Write the first story'} -></a>
+              <a class="btn primary" href="${heroStory ? '#explore' : '#write'}">${heroStory ? 'Start reading' : 'Write the first story'} →</a>
               <a class="btn" href="#write">Write your story</a>
             </div>
           </div>
@@ -227,7 +234,7 @@ function home() {
                 </div>
               </a>
               <div class="ranks">
-                ${trending.slice(1, 5).map((story, index) => `
+                ${trending.filter(story => story.id !== featured.id).slice(0, 4).map((story, index) => `
                   <a class="rank" href="#story/${story.slug}">
                     <strong>0${index + 1}</strong>
                     <div>
@@ -240,7 +247,9 @@ function home() {
             </div>
           </div>
         </section>
-        <section>
+      ` : ''}
+
+      <section>
           <div class="container">
             <div class="section-head">
               <div>
@@ -248,10 +257,9 @@ function home() {
                 <h2>Recently published</h2>
               </div>
             </div>
-            <div class="grid">${recent.map(card).join('')}</div>
+            <div class="grid">${recent.length ? recent.map(card).join('') : empty('No published stories yet', 'Be the first writer to publish one.')}</div>
           </div>
-        </section>
-      ` : ''}
+      </section>
 
       <section>
         <div class="container">
@@ -261,7 +269,7 @@ function home() {
               <h2>Explore categories</h2>
             </div>
           </div>
-          <div class="chips">${categories.map(category => `<a class="chip" href="#explore">${esc(category.name)}</a>`).join('')}</div>
+          <div class="chips">${categories.map(category => `<a class="chip" href="#explore/${category.id}">${esc(category.name)}</a>`).join('')}</div>
         </div>
       </section>
 
@@ -279,22 +287,22 @@ function explore() {
       </div>
       <div class="tools">
         <div class="container toolrow">
-          <label>Search<input id="exploreSearch" placeholder="Search stories"></label>
-          <select id="category">
+          <label>Search<input id="exploreSearch" value="${esc(browseState.query)}" placeholder="Search stories"></label>
+          <select id="category" aria-label="Filter by category">
             <option value="">All categories</option>
-            ${categories.map(category => `<option value="${category.id}">${esc(category.name)}</option>`).join('')}
+            ${categories.map(category => `<option value="${category.id}" ${String(browseState.category) === String(category.id) ? 'selected' : ''}>${esc(category.name)}</option>`).join('')}
           </select>
-          <select id="sort">
-            <option value="latest">Latest</option>
-            <option value="views">Most Viewed</option>
-            <option value="liked">Most Liked</option>
+          <select id="sort" aria-label="Sort stories">
+            <option value="latest" ${browseState.sort === 'latest' ? 'selected' : ''}>Latest</option>
+            <option value="views" ${browseState.sort === 'views' ? 'selected' : ''}>Most Viewed</option>
+            <option value="liked" ${browseState.sort === 'liked' ? 'selected' : ''}>Most Liked</option>
           </select>
         </div>
       </div>
       <section>
         <div class="container">
           <div class="grid" id="storyGrid">${stories.length ? stories.slice(0, 12).map(card).join('') : empty('No stories yet', 'Publish the first story.')}</div>
-          <button id="more" class="btn load-more">Load more</button>
+          <button id="more" class="btn load-more" ${stories.length < 12 ? 'hidden' : ''}>Load more</button>
         </div>
       </section>
       ${footer()}
@@ -306,6 +314,7 @@ function reader(story) {
   if (!story) return `<div class="page auth-wrap">${empty('Story not found', 'It may have been removed.')}</div>`;
 
   const content = sanitizeStoryHtml(story.content || '');
+  const isPublished = story.status === 'published';
   const index = stories.findIndex(item => item.slug === story.slug);
   const prev = index > 0 ? stories[index - 1] : null;
   const next = index >= 0 && index < stories.length - 1 ? stories[index + 1] : null;
@@ -315,10 +324,17 @@ function reader(story) {
 
   return `
     <article class="page reader">
-      <header class="reader-head">
+      <div class="reader-intro">
         <span class="eyebrow">${esc(story.cat)}</span>
         <h1>${esc(story.title)}</h1>
         <p class="subtitle">${esc(story.desc)}</p>
+      </div>
+
+      <div class="reader-cover">
+        <img src="${img(story)}" alt="Cover for ${esc(story.title)}">
+      </div>
+
+      <div class="reader-meta">
         <div class="byline">
           <span class="avatar peach">${esc(story.ini)}</span>
           <div>
@@ -329,10 +345,10 @@ function reader(story) {
             ${session && session.user.id === story.authorId
               ? '<span class="btn disabled">Your story</span>'
               : `<button class="btn followAuthor" data-id="${story.authorId}">Follow</button>`}
-            <button class="btn reportStory">Report</button>
+            ${isPublished ? '<button class="btn reportStory">Report</button>' : '<span class="btn disabled">Private draft</span>'}
           </div>
         </div>
-      </header>
+      </div>
 
       <div class="reader-tools">
         <button class="like icon-btn" data-id="${story.id}" aria-label="Like">${icons.heart}</button>
@@ -340,10 +356,6 @@ function reader(story) {
         <button id="font" class="icon-btn" aria-label="Adjust font size"><span>Aa</span></button>
         <button id="readerMode" class="icon-btn" aria-label="Toggle reading mode">${icons.theme}</button>
         <button class="share icon-btn" aria-label="Share story">${icons.share}</button>
-      </div>
-
-      <div class="reader-cover">
-        <img src="${img(story)}" alt="">
       </div>
 
       <div class="reader-body">${content}
@@ -377,9 +389,11 @@ function reader(story) {
             <h2>Comments</h2>
           </div>
         </div>
-        <div id="commentList"></div>
-        <textarea id="commentBody" maxlength="2000" placeholder="Leave a thoughtful response..."></textarea>
-        <button class="btn primary" id="comment">Post comment</button>
+        ${isPublished ? `
+          <div id="commentList"></div>
+          <textarea id="commentBody" maxlength="2000" placeholder="Leave a thoughtful response..."></textarea>
+          <button class="btn primary" id="comment">Post comment</button>
+        ` : empty('Comments locked', 'Publish this draft to start a conversation.')}
       </div>
     </article>
   `;
@@ -422,7 +436,7 @@ function write(story = null) {
         <button data-cmd="insertUnorderedList">List</button>
       </div>
       <div class="editor-stack">
-        <div class="editor-area" id="storyContent" contenteditable="true">${initialContent}</div>
+        <div class="editor-area" id="storyContent" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Story content">${initialContent}</div>
         <div class="editor-preview" id="storyPreview" aria-live="polite"></div>
       </div>
       <div class="fields">
@@ -709,8 +723,12 @@ async function route() {
   try {
     if (page === 'story') {
       currentStory = await StoryAPI.story(decodeURIComponent(arg || ''));
-      await StoryAPI.view(currentStory.id);
+      if (currentStory.status === 'published') await StoryAPI.view(currentStory.id).catch(() => {});
       $('#app').innerHTML = reader(currentStory);
+    } else if (page === 'explore') {
+      browseState = { category: arg || '', query: '', sort: 'latest' };
+      stories = await StoryAPI.stories({ ...browseState, from: 0, to: 11 });
+      $('#app').innerHTML = explore();
     } else if (page === 'profile') {
       $('#app').innerHTML = await profile(arg || 'published');
     } else if (page === 'admin' || page.startsWith('admin-')) {
@@ -724,14 +742,15 @@ async function route() {
     } else if (page === 'privacy' || page === 'terms') {
       $('#app').innerHTML = legal(page);
     } else {
+      await refresh();
       $('#app').innerHTML = home();
     }
 
     scrollTo(0, 0);
     bind();
 
-    if (page === 'story') {
-      loadComments();
+    if (page === 'story' && currentStory.status === 'published') {
+      loadComments().catch(error => console.error('Could not load comments', error));
       StoryAPI.markRead(currentStory.id, 10);
     }
 
@@ -743,9 +762,19 @@ async function route() {
   }
 }
 
-async function saveStory(publish) {
+function saveStory(publish) {
+  clearTimeout(timer);
+  saveQueue = saveQueue.catch(() => {}).then(() => persistStory(publish));
+  return saveQueue;
+}
+
+async function persistStory(publish) {
+  if (!$('#storyTitle') || !$('#storyContent')) return;
   const title = $('#storyTitle').value.trim();
   if (title.length < 3) throw Error('Add a title with at least 3 characters');
+  const content = $('#storyContent').innerHTML;
+  const plainContent = stripHtml(content).replace(/\s+/g, ' ').trim();
+  if (publish && (!plainContent || plainContent === 'Tell your story...')) throw Error('Add story content before publishing');
 
   let cover = editingStory?.cover || null;
   const file = $('#storyCover').files[0];
@@ -755,17 +784,19 @@ async function saveStory(publish) {
     id: draftId,
     title,
     subtitle: $('#storySubtitle').value,
-    content: $('#storyContent').innerHTML,
+    content,
     category: $('#storyCategory').value,
     tags: $('#storyTags').value.split(',').map(tag => tag.trim()).filter(Boolean),
     cover,
+    currentStatus: editingStory?.status || null,
+    publishedAt: editingStory?.publishedAt || editingStory?.published_at || null,
   };
 
   const record = await StoryAPI.saveStory(payload, publish);
   draftId = record.id;
   editingStory = { ...(editingStory || {}), ...record, cover };
 
-  $('#saveState').textContent = publish ? 'Published' : 'Draft saved';
+  if ($('#saveState')) $('#saveState').textContent = publish ? 'Published' : 'Draft saved';
   toast(publish ? 'Story published' : 'Draft saved');
 
   if (publish) {
@@ -793,6 +824,8 @@ async function loadComments() {
 }
 
 function bind() {
+  requestAnimationFrame(() => $$('.reveal').forEach(card => card.classList.add('seen')));
+
   $$('.save,.bookmark').forEach(button => {
     button.onclick = async event => {
       event.preventDefault();
@@ -853,10 +886,11 @@ function bind() {
     }
   });
 
-  $('#category')?.addEventListener('change', filter);
-  $('#sort')?.addEventListener('change', filter);
-  $('#exploreSearch')?.addEventListener('input', debounce(filter, 300));
-  $('#more')?.addEventListener('click', more);
+  const runFilter = () => filter().catch(authFail);
+  if ($('#category')) $('#category').onchange = runFilter;
+  if ($('#sort')) $('#sort').onchange = runFilter;
+  if ($('#exploreSearch')) $('#exploreSearch').oninput = debounce(runFilter, 300);
+  if ($('#more')) $('#more').onclick = () => more().catch(authFail);
 
   $$('.editor-bar [data-cmd]').forEach(button => {
     button.onclick = () => document.execCommand(button.dataset.cmd, false, button.dataset.cmd === 'formatBlock' ? 'blockquote' : null);
@@ -1028,13 +1062,16 @@ async function handleAuth(event) {
 }
 
 async function filter() {
+  const requestId = ++filterRequest;
   browseState = {
     category: $('#category').value,
     query: $('#exploreSearch').value.trim(),
     sort: $('#sort').value,
   };
 
-  stories = await StoryAPI.stories({ ...browseState, from: 0, to: 11 });
+  const results = await StoryAPI.stories({ ...browseState, from: 0, to: 11 });
+  if (requestId !== filterRequest) return;
+  stories = results;
   $('#storyGrid').innerHTML = stories.length ? stories.map(card).join('') : empty('No matches', 'Try another search.');
   $('#more') && ($('#more').hidden = stories.length < 12);
   bind();
@@ -1113,32 +1150,42 @@ $('#searchBtn').onclick = () => {
 };
 
 $('#searchInput').oninput = debounce(async event => {
-  const results = await StoryAPI.stories({ query: event.target.value, to: 4 });
-  $('#results').innerHTML = results.map(story => `
-    <a class="result" href="#story/${story.slug}">
-      <img src="${img(story)}" alt="">
-      <span><b>${esc(story.title)}</b><small>${esc(story.author)}</small></span>
-    </a>
-  `).join('');
+  const query = event.target.value.trim();
+  if (!query) return ($('#results').innerHTML = '');
+  try {
+    const results = await StoryAPI.stories({ query, to: 4 });
+    $('#results').innerHTML = results.length ? results.map(story => `
+      <a class="result" href="#story/${encodeURIComponent(story.slug)}">
+        <img src="${img(story)}" alt="">
+        <span><b>${esc(story.title)}</b><small>${esc(story.author)}</small></span>
+      </a>
+    `).join('') : empty('No matches', 'Try another title or subtitle.');
+  } catch (error) {
+    $('#results').innerHTML = empty('Search unavailable', 'Please try again.');
+  }
 }, 250);
 
 overlay.onclick = event => event.target === overlay && overlay.classList.remove('open');
 
 $('#bell').onclick = async () => {
   if (!session) return location.hash = 'auth/signin';
-  $('#notifications').classList.toggle('open');
-  const items = await StoryAPI.notifications();
-  $('#notificationList').innerHTML = items.length
-    ? items.map(notification => `
-        <div class="notice">
-          <span class="avatar">${esc(notification.actor?.display_name?.[0] || 'S')}</span>
-          <p>
-            <b>${esc(notification.message || notification.kind)}</b>
-            <small>${new Date(notification.created_at).toLocaleString()}</small>
-          </p>
-        </div>
-      `).join('')
-    : empty('All caught up', 'No notifications.');
+  try {
+    $('#notifications').classList.toggle('open');
+    const items = await StoryAPI.notifications();
+    $('#notificationList').innerHTML = items.length
+      ? items.map(notification => `
+          <div class="notice">
+            <span class="avatar">${esc(notification.actor?.display_name?.[0] || 'S')}</span>
+            <p>
+              <b>${esc(notification.message || notification.kind)}</b>
+              <small>${new Date(notification.created_at).toLocaleString()}</small>
+            </p>
+          </div>
+        `).join('')
+      : empty('All caught up', 'No notifications.');
+  } catch (error) {
+    authFail(error);
+  }
 };
 
 $('#markRead').onclick = async () => {
@@ -1162,7 +1209,11 @@ document.addEventListener('keydown', event => {
   }
 });
 
-addEventListener('hashchange', route);
+addEventListener('hashchange', () => {
+  overlay.classList.remove('open');
+  $('#notifications').classList.remove('open');
+  route();
+});
 addEventListener('scroll', () => {
   const header = $('#header');
   header.classList.toggle('scrolled', scrollY > 30);
@@ -1172,7 +1223,10 @@ addEventListener('scroll', () => {
   $('#progress').style.width = `${total > 0 ? scrollY / total * 100 : 0}%`;
 
   if (currentStory && location.hash.startsWith('#story/')) {
-    StoryAPI.markRead(currentStory.id, Math.min(100, Math.round(total > 0 ? scrollY / total * 100 : 0)));
+    clearTimeout(readTimer);
+    readTimer = setTimeout(() => {
+      StoryAPI.markRead(currentStory.id, Math.min(100, Math.round(total > 0 ? scrollY / total * 100 : 0)));
+    }, 800);
   }
 }, { passive: true });
 
