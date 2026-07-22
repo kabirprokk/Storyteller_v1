@@ -198,38 +198,38 @@
     };
   }
 
-  // Eight fragments in each group create 8 x 8 x 8 = 512 unique 18-20 word sentences.
+  // Eight fragments per group create 512 unique challenges, each 50-55 characters.
   const OPENINGS = Object.freeze([
-    'The quiet traveler follows moonlit roads',
-    'A patient reader gathers forgotten stories',
-    'Every curious writer notices hidden details',
-    'The gentle morning carries thoughtful voices',
-    'One careful visitor watches changing shadows',
-    'A bright lantern reveals winding pathways',
-    'The distant river remembers ancient journeys',
-    'Each open window welcomes honest wonder',
+    'Quiet readers seek',
+    'Patient minds find',
+    'Kind writers share',
+    'Calm travelers see',
+    'Open windows frame',
+    'Soft mornings wake',
+    'Warm lanterns glow',
+    'Old stories return',
   ]);
 
   const MIDDLES = Object.freeze([
-    'while patient lanterns guide distant footsteps',
-    'as warm breezes move through silent gardens',
-    'when careful hands preserve meaningful moments',
-    'before golden sunlight reaches sleeping rooftops',
-    'while small discoveries inspire generous conversations',
-    'as steady rain awakens peaceful city streets',
-    'when kind strangers exchange remarkable ideas',
-    'before evening colors settle across quiet fields',
+    'under moonlight',
+    'beside old roads',
+    'through soft rain',
+    'among tall trees',
+    'before sunrise',
+    'where winds rise',
+    'as bells echo now',
+    'while rivers turn',
   ]);
 
   const ENDINGS = Object.freeze([
-    'near the valley before morning arrives',
-    'beside old books beneath a silver sky',
-    'among tall trees where patient birds listen',
-    'through the village after distant bells fade',
-    'beyond the bridge where new paths begin',
-    'inside the library as the daylight softens',
-    'around the harbor while calm waters shimmer',
-    'under bright stars until the horizon glows',
+    'and wonder stays',
+    'before dawn comes',
+    'where hopes grow',
+    'as stars appear',
+    'and dreams begin',
+    'while earth rests',
+    'where voices meet',
+    'and light returns',
   ]);
 
   const SENTENCES = Object.freeze(OPENINGS.flatMap(opening =>
@@ -237,7 +237,6 @@
       ENDINGS.map(ending => `${opening} ${middle} ${ending}.`)
     )
   ));
-
   const randomInteger = maximum => {
     if (crypto?.getRandomValues) {
       const values = new Uint32Array(1);
