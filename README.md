@@ -32,6 +32,7 @@ Storyteller is a responsive writing and reading platform built as a static singl
 - Session-only human-verification gate with 512 local sentence combinations and typing-rhythm checks
 - Role-protected administration with expandable account records, report evidence, moderation controls, and metrics
 - Integrated Help Centre for questions, problem reports, suggestions, and administrator email
+- Direct QR donations with an administrator-managed image and no payment-platform integration
 - Detailed Privacy Policy, Terms and Conditions, and Community Rules
 - Rate-limited view counting through a Supabase Edge Function
 

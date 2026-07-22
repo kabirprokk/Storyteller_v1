@@ -387,3 +387,34 @@ body.light .hero .hero-copy .btn{color:#fffaf0;background:#11100ea6;border-color
 body.light .hero .hero-copy .btn:hover{background:#211d18d9;border-color:#fffaf0a6}
 body.light .hero .hero-copy .btn.primary{color:#201913;background:#fffaf0;border-color:#fffaf0;text-shadow:none}
 body.light .hero .hero-copy .btn.primary:hover{background:#fff;border-color:#fff}
+/* Donation experience */
+.footer-donate{margin-top:20px;gap:9px;height:42px;padding-inline:16px;color:var(--accent2)}
+.footer-donate span{font-size:20px;line-height:1;transition:transform .2s ease}
+.footer-donate:hover span{transform:scale(1.15)}
+#donationOverlay{z-index:165;align-items:center;padding:20px}
+.donation-modal{position:relative;width:min(560px,94vw);padding:clamp(30px,5vw,54px);border:1px solid var(--line);border-radius:24px;background:color-mix(in srgb,var(--card) 96%,transparent);box-shadow:0 35px 120px #0009;backdrop-filter:blur(24px);transform:translateY(12px) scale(.985);transition:transform .3s ease}
+#donationOverlay.open .donation-modal{transform:none}
+.donation-modal h2{font:400 clamp(46px,7vw,72px)/.92 var(--serif);margin:18px 0}
+.donation-modal p{color:var(--muted);max-width:470px}
+.modal-close{position:absolute;right:20px;top:20px;width:42px;height:42px;border:1px solid var(--line);border-radius:50%;font-size:25px}
+.coming-soon{display:block;margin-top:35px;color:var(--accent2);font:italic 32px var(--serif)}
+.donation-qr{display:grid;justify-items:center;gap:14px;margin-top:28px;padding:22px;border:1px solid var(--line);border-radius:18px;background:#fff}
+.donation-qr img{display:block;width:min(320px,72vw);aspect-ratio:1;object-fit:contain}
+.donation-qr small{color:#514b44;text-align:center}
+.donation-admin-grid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:28px;align-items:center;margin-top:25px;padding:28px;border:1px solid var(--line);border-radius:18px;background:#ffffff03}
+.donation-admin-grid h3{font:34px var(--serif);margin:12px 0}
+.donation-admin-grid p{color:var(--muted);max-width:580px}
+#donationQrForm{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:22px}
+.qr-upload{display:inline-flex;align-items:center;height:48px;padding:0 18px;border:1px dashed var(--line);border-radius:12px;cursor:pointer;color:var(--muted)}
+.qr-upload:hover{border-color:var(--accent2);color:var(--text)}
+.qr-upload input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.admin-qr-preview{min-height:250px;display:grid;place-items:center;align-content:center;gap:10px;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--bg);text-align:center}
+.admin-qr-preview img{width:100%;aspect-ratio:1;object-fit:contain;border-radius:10px;background:#fff;padding:8px}
+.admin-qr-preview strong{font:italic 27px var(--serif);color:var(--accent2)}
+.admin-qr-preview small{color:var(--muted)}
+body.light .footer-donate{color:#8b521b;background:#fffaf3}
+body.light .donation-modal{background:rgba(255,253,249,.97);color:#201a15;border-color:#34281b24;box-shadow:0 30px 90px #49321b24}
+body.light .donation-admin-grid{background:#fffaf3;border-color:#34281b20}
+body.light .admin-qr-preview{background:#f4ede3;border-color:#34281b20}
+body.light .qr-upload{background:#fffdf9;border-color:#6c513657}
+@media(max-width:760px){.donation-admin-grid{grid-template-columns:1fr}.admin-qr-preview{width:min(280px,100%)}.footer-donate{width:max-content}.donation-modal{padding:42px 24px 28px}}

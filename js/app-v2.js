@@ -176,6 +176,7 @@ const footer = () => `
         <div>
           <a class="brand" href="#home">${brand}</a>
           <p>A quiet place for loud ideas, human truths, and stories that stay with you.</p>
+          <button class="btn footer-donate openDonation" type="button"><span aria-hidden="true">&#9825;</span> Donate to the developer</button>
         </div>
         <div>
           <h5>DISCOVER</h5>
@@ -713,12 +714,13 @@ function helpCenter() {
 async function admin() {
   if (!adminMode) return `<div class="page auth-wrap">${empty('Access denied', 'This area is reserved for administrators.')}</div>`;
 
-  const [metrics, storiesData, commentsData, usersData, reportsData] = await Promise.all([
+  const [metrics, storiesData, commentsData, usersData, reportsData, donationSettings] = await Promise.all([
     StoryAPI.adminMetrics(),
     StoryAPI.adminStories(),
     StoryAPI.adminComments(),
     StoryAPI.adminUsers(),
     StoryAPI.adminReports(),
+    StoryAPI.donationConfig(),
   ]);
 
   const storyRows = storiesData.map(story => `
@@ -828,6 +830,7 @@ async function admin() {
         <a class="brand" href="#home">${brand}</a>
         <span class="eyebrow">Control room</span>
         <a href="#admin">Overview</a>
+        <a href="#admin-donations">Donations</a>
         <a href="#admin-stories">Stories</a>
         <a href="#admin-users">Users</a>
         <a href="#admin-comments">Comments</a>
@@ -848,6 +851,15 @@ async function admin() {
           <div><small>Total views</small><b>${metrics.views || 0}</b></div>
           <div><small>Open reports</small><b>${metrics.open_reports || 0}</b></div>
         </div>
+        <section class="admin-section donation-admin" id="admin-donations">
+          <div class="between"><h2>Donations</h2><span>Direct QR support</span></div>
+          <div class="donation-admin-grid">
+            <div><span class="eyebrow">No payment platform</span><h3>Donation QR code</h3><p>Upload the QR image that visitors should scan. Until one is uploaded, the public donation window displays “Coming soon...”.</p>
+              <form id="donationQrForm"><label class="qr-upload"><span>Choose QR image</span><input id="donationQrFile" type="file" accept="image/png,image/jpeg,image/webp" required></label><button class="btn primary" type="submit">Upload QR code</button>${donationSettings?.qr_url ? '<button id="removeDonationQr" class="btn danger" type="button">Remove QR</button>' : ''}</form>
+            </div>
+            <div class="admin-qr-preview">${donationSettings?.qr_url ? `<img src="${esc(donationSettings.qr_url)}" alt="Current donation QR code"><small>Current public QR code</small>` : '<strong>Coming soon...</strong><small>No QR code uploaded</small>'}</div>
+          </div>
+        </section>
         <section class="admin-section" id="admin-stories">
           <div class="between"><h2>Stories</h2><span>${storiesData.length} records</span></div>
           ${storyRows || empty('No stories', 'Published and draft stories appear here.')}
@@ -1196,6 +1208,26 @@ $('#comment')?.addEventListener('click', async () => {
   });
 
   $$('[data-admin]').forEach(button => button.onclick = () => adminAction(button));
+
+  $('#donationQrForm')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const file = $('#donationQrFile')?.files?.[0];
+    if (!file) return toast('Choose a QR image');
+    const submit = event.currentTarget.querySelector('button[type="submit"]');
+    try {
+      submit.disabled = true;
+      submit.textContent = 'Uploading...';
+      await StoryAPI.adminUploadDonationQr(file);
+      toast('Donation QR code published');
+      await route();
+    } catch (error) { authFail(error); }
+    finally { if (submit.isConnected) { submit.disabled = false; submit.textContent = 'Upload QR code'; } }
+  });
+  $('#removeDonationQr')?.addEventListener('click', async () => {
+    if (!confirm('Remove the public donation QR code?')) return;
+    try { await StoryAPI.adminClearDonationQr(); toast('Donation QR code removed'); await route(); }
+    catch (error) { authFail(error); }
+  });
   editorStats();
 }
 
@@ -1438,6 +1470,20 @@ function toast(message) {
 
 const overlay = $('#search');
 const helpOverlay = $('#helpOverlay');
+const donationOverlay = $('#donationOverlay');
+const closeDonationModal = () => {
+  donationOverlay.classList.remove('open');
+  donationOverlay.setAttribute('aria-hidden', 'true');
+};
+const openDonationModal = async () => {
+  donationOverlay.classList.add('open');
+  donationOverlay.setAttribute('aria-hidden', 'false');
+  $('#donationContent').innerHTML = '<p>Your support will help keep Storyteller independent and improve the reading and writing experience.</p><strong class="coming-soon">Coming soon...</strong>';
+  $('#closeDonation')?.focus();
+  const setting = await StoryAPI.donationConfig();
+  if (!setting?.qr_url || !donationOverlay.classList.contains('open')) return;
+  $('#donationContent').innerHTML = `<p>Scan this QR code with your preferred payment app. Your donation goes directly to the developer.</p><div class="donation-qr"><img src="${esc(setting.qr_url)}" alt="Donation payment QR code"><small>Verify the recipient in your payment app before confirming.</small></div>`;
+};
 const openHelpModal = () => {
   helpOverlay.classList.add('open');
   helpOverlay.setAttribute('aria-hidden', 'false');
@@ -1451,8 +1497,16 @@ const closeHelpModal = () => {
 };
 $('#helpBtn').onclick = openHelpModal;
 $('#closeHelp').onclick = closeHelpModal;
+$('#closeDonation').onclick = closeDonationModal;
 helpOverlay.onclick = event => event.target === helpOverlay && closeHelpModal();
+donationOverlay.onclick = event => event.target === donationOverlay && closeDonationModal();
 document.addEventListener('click', event => {
+  const donationAction = event.target.closest('.openDonation');
+  if (donationAction) {
+    event.preventDefault();
+    openDonationModal();
+    return;
+  }
   const gmailAction = event.target.closest('[data-gmail]');
   if (gmailAction) {
     event.preventDefault();
@@ -1530,6 +1584,7 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Escape') {
     overlay.classList.remove('open');
     closeHelpModal();
+    closeDonationModal();
   }
   if ((event.ctrlKey || event.metaKey) && event.key === 's') {
     event.preventDefault();
@@ -1539,6 +1594,7 @@ document.addEventListener('keydown', event => {
 
 addEventListener('hashchange', () => {
   overlay.classList.remove('open');
+  closeDonationModal();
   closeHelpModal();
   $('#notifications').classList.remove('open');
   route();
