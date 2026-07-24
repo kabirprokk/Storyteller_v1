@@ -145,6 +145,7 @@ const setEditorPage = (index, syncCurrent = true) => {
 
 const sanitizeStoryHtml = html => DOMPurify.sanitize(html || '<p></p>', {
   USE_PROFILES: { html: true },
+  ADD_ATTR: ['data-story-page-break', 'target', 'rel'],
   FORBID_TAGS: ['style', 'form', 'input', 'button', 'iframe'],
 });
 
@@ -558,11 +559,25 @@ function write(story = null) {
       </div>
       <input class="title-input" id="storyTitle" maxlength="160" value="${esc(story?.title || '')}" placeholder="Your story begins with a title...">
       <input class="subtitle-input" id="storySubtitle" maxlength="300" value="${esc(story?.desc || '')}" placeholder="Add a compelling subtitle">
-      <div class="editor-bar">
-        <button data-cmd="bold"><b>B</b></button>
-        <button data-cmd="italic"><i>I</i></button>
-        <button data-cmd="formatBlock">Quote</button>
-        <button data-cmd="insertUnorderedList">List</button>
+      <div class="editor-bar" aria-label="Formatting toolbar">
+        <button data-cmd="undo" title="Undo">Undo</button>
+        <button data-cmd="redo" title="Redo">Redo</button>
+        <span class="toolbar-separator" aria-hidden="true"></span>
+        <button data-cmd="formatBlock" data-value="p" title="Paragraph">P</button>
+        <button data-cmd="formatBlock" data-value="h2" title="Heading">H2</button>
+        <button data-cmd="formatBlock" data-value="h3" title="Subheading">H3</button>
+        <button data-cmd="formatBlock" data-value="blockquote" title="Quote">Quote</button>
+        <span class="toolbar-separator" aria-hidden="true"></span>
+        <button data-cmd="bold" title="Bold"><b>B</b></button>
+        <button data-cmd="italic" title="Italic"><i>I</i></button>
+        <button data-cmd="underline" title="Underline"><u>U</u></button>
+        <button data-cmd="removeFormat" title="Clear formatting">Clear</button>
+        <span class="toolbar-separator" aria-hidden="true"></span>
+        <button data-cmd="insertUnorderedList" title="Bullet list">Bullets</button>
+        <button data-cmd="insertOrderedList" title="Numbered list">Numbers</button>
+        <button data-action="link" title="Add link">Link</button>
+        <button data-action="unlink" title="Remove link">Unlink</button>
+        <button data-action="divider" title="Insert divider">Divider</button>
       </div>
       <div class="editor-stack">
         <div class="editor-area" id="storyContent" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Story content">${initialContent}</div>
@@ -1258,8 +1273,34 @@ $('#comment')?.addEventListener('click', async () => {
   if ($('#exploreSearch')) $('#exploreSearch').oninput = debounce(runFilter, 300);
   if ($('#more')) $('#more').onclick = () => more().catch(authFail);
 
-  $$('.editor-bar [data-cmd]').forEach(button => {
-    button.onclick = () => document.execCommand(button.dataset.cmd, false, button.dataset.cmd === 'formatBlock' ? 'blockquote' : null);
+  $$('.editor-bar button').forEach(button => {
+    button.onmousedown = event => event.preventDefault();
+    button.onclick = () => {
+      const editor = $('#storyContent');
+      editor?.focus();
+      if (button.dataset.action === 'link') {
+        const url = prompt('Paste a link URL starting with https://');
+        if (!url) return;
+        try {
+          const link = new URL(url);
+          if (!['http:', 'https:'].includes(link.protocol)) throw new Error('Use an http or https link');
+          document.execCommand('createLink', false, link.href);
+          editor?.querySelectorAll('a[href]').forEach(anchor => {
+            anchor.target = '_blank';
+            anchor.rel = 'noopener noreferrer';
+          });
+        } catch (error) {
+          return toast(error.message || 'Invalid link');
+        }
+      } else if (button.dataset.action === 'unlink') {
+        document.execCommand('unlink', false, null);
+      } else if (button.dataset.action === 'divider') {
+        document.execCommand('insertHTML', false, '<hr><p><br></p>');
+      } else if (button.dataset.cmd) {
+        document.execCommand(button.dataset.cmd, false, button.dataset.value || null);
+      }
+      markEditorChanged();
+    };
   });
 
   const markEditorChanged = () => {

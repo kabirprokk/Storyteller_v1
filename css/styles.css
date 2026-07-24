@@ -442,3 +442,11 @@ body.light .writer-donate-tool:hover,body.light .writer-donate-tool:focus-visibl
 /* Writer page manager */
 .page-manager{margin:24px 0;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--card) 82%,transparent);padding:16px;display:grid;gap:14px}.page-manager>div:first-child{display:flex;align-items:end;justify-content:space-between;gap:15px}.page-manager small{color:var(--muted)}.page-actions{display:flex;flex-wrap:wrap;gap:8px}.page-actions .btn{height:38px;padding:0 13px}.page-tabs{padding-top:4px}.page-tabs .chip{cursor:pointer}.preview-page-break,.reader-page-break{display:flex;align-items:center;gap:14px;margin:46px 0;color:var(--muted);font:10px var(--sans);letter-spacing:.18em;text-transform:uppercase}.preview-page-break:before,.preview-page-break:after,.reader-page-break:before,.reader-page-break:after{content:"";height:1px;background:var(--line);flex:1}.preview-page-break span,.reader-page-break span{white-space:nowrap}.reader-page-break{margin:70px 0 55px}@media(max-width:650px){.page-manager>div:first-child{display:block}.page-actions .btn{flex:1}.page-tabs .chip{padding:10px 12px}}
 body.light .page-manager{background:#fffdf9;border-color:#34281b25}
+/* Expanded writer formatting toolbar */
+.editor-bar{display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.editor-bar button{width:auto;min-width:38px;padding:0 11px;border-radius:8px;white-space:nowrap;color:var(--text)}
+.toolbar-separator{width:1px;height:26px;background:var(--line);margin:0 3px}
+.editor-area a,.editor-preview a,.reader-body a{color:var(--accent2);text-decoration:underline;text-underline-offset:3px}
+.editor-area hr,.editor-preview hr,.reader-body hr{border:0;border-top:1px solid var(--line);margin:34px 0}
+body.light .editor-bar button{color:#2b231c}
+@media(max-width:650px){.toolbar-separator{display:none}.editor-bar button{flex:1;min-width:70px}}
