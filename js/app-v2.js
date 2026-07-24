@@ -560,24 +560,24 @@ function write(story = null) {
       <input class="title-input" id="storyTitle" maxlength="160" value="${esc(story?.title || '')}" placeholder="Your story begins with a title...">
       <input class="subtitle-input" id="storySubtitle" maxlength="300" value="${esc(story?.desc || '')}" placeholder="Add a compelling subtitle">
       <div class="editor-bar" aria-label="Formatting toolbar">
-        <button data-cmd="undo" title="Undo">Undo</button>
-        <button data-cmd="redo" title="Redo">Redo</button>
+        <button data-cmd="undo" title="Undo" aria-label="Undo"><span class="material-symbols-outlined" aria-hidden="true">undo</span></button>
+        <button data-cmd="redo" title="Redo" aria-label="Redo"><span class="material-symbols-outlined" aria-hidden="true">redo</span></button>
         <span class="toolbar-separator" aria-hidden="true"></span>
-        <button data-cmd="formatBlock" data-value="p" title="Paragraph">P</button>
-        <button data-cmd="formatBlock" data-value="h2" title="Heading">H2</button>
-        <button data-cmd="formatBlock" data-value="h3" title="Subheading">H3</button>
-        <button data-cmd="formatBlock" data-value="blockquote" title="Quote">Quote</button>
+        <button data-cmd="formatBlock" data-value="p" title="Paragraph" aria-label="Paragraph"><span class="material-symbols-outlined" aria-hidden="true">notes</span></button>
+        <button data-cmd="formatBlock" data-value="h2" title="Heading" aria-label="Heading"><span class="material-symbols-outlined" aria-hidden="true">title</span></button>
+        <button data-cmd="formatBlock" data-value="h3" title="Subheading" aria-label="Subheading"><span class="material-symbols-outlined" aria-hidden="true">text_fields</span></button>
+        <button data-cmd="formatBlock" data-value="blockquote" title="Quote" aria-label="Quote"><span class="material-symbols-outlined" aria-hidden="true">format_quote</span></button>
         <span class="toolbar-separator" aria-hidden="true"></span>
-        <button data-cmd="bold" title="Bold"><b>B</b></button>
-        <button data-cmd="italic" title="Italic"><i>I</i></button>
-        <button data-cmd="underline" title="Underline"><u>U</u></button>
-        <button data-cmd="removeFormat" title="Clear formatting">Clear</button>
+        <button data-cmd="bold" title="Bold" aria-label="Bold"><span class="material-symbols-outlined" aria-hidden="true">format_bold</span></button>
+        <button data-cmd="italic" title="Italic" aria-label="Italic"><span class="material-symbols-outlined" aria-hidden="true">format_italic</span></button>
+        <button data-cmd="underline" title="Underline" aria-label="Underline"><span class="material-symbols-outlined" aria-hidden="true">format_underlined</span></button>
+        <button data-cmd="removeFormat" title="Clear formatting" aria-label="Clear formatting"><span class="material-symbols-outlined" aria-hidden="true">format_clear</span></button>
         <span class="toolbar-separator" aria-hidden="true"></span>
-        <button data-cmd="insertUnorderedList" title="Bullet list">Bullets</button>
-        <button data-cmd="insertOrderedList" title="Numbered list">Numbers</button>
-        <button data-action="link" title="Add link">Link</button>
-        <button data-action="unlink" title="Remove link">Unlink</button>
-        <button data-action="divider" title="Insert divider">Divider</button>
+        <button data-cmd="insertUnorderedList" title="Bullet list" aria-label="Bullet list"><span class="material-symbols-outlined" aria-hidden="true">format_list_bulleted</span></button>
+        <button data-cmd="insertOrderedList" title="Numbered list" aria-label="Numbered list"><span class="material-symbols-outlined" aria-hidden="true">format_list_numbered</span></button>
+        <button data-action="link" title="Add link" aria-label="Add link"><span class="material-symbols-outlined" aria-hidden="true">add_link</span></button>
+        <button data-action="unlink" title="Remove link" aria-label="Remove link"><span class="material-symbols-outlined" aria-hidden="true">link_off</span></button>
+        <button data-action="divider" title="Insert divider" aria-label="Insert divider"><span class="material-symbols-outlined" aria-hidden="true">horizontal_rule</span></button>
       </div>
       <div class="editor-stack">
         <div class="editor-area" id="storyContent" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Story content">${initialContent}</div>
