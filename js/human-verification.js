@@ -557,6 +557,14 @@
     requestAnimationFrame(() => gate.classList.add('is-visible'));
   }
 
-  if (document.readyState === 'complete') startVerification();
-  else window.addEventListener('load', startVerification, { once: true });
+  const bootVerification = () => {
+    if (window.STORYTELLER_INTRO_PENDING) {
+      window.addEventListener('storyteller:intro-complete', startVerification, { once: true });
+      return;
+    }
+    startVerification();
+  };
+
+  if (document.readyState === 'complete') bootVerification();
+  else window.addEventListener('load', bootVerification, { once: true });
 })();

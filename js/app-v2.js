@@ -1055,9 +1055,14 @@ async function route() {
 
   try {
     if (page === 'story') {
-      currentStory = await StoryAPI.story(decodeURIComponent(arg || ''));
-      if (currentStory.status === 'published') await StoryAPI.view(currentStory.id).catch(() => {});
-      $('#app').innerHTML = reader(currentStory);
+      if (!session) {
+        try { sessionStorage.setItem('storyteller.redirectAfterAuth', location.hash || '#home'); } catch {}
+        $('#app').innerHTML = auth('signin', 'Sign in or create an account to read stories.');
+      } else {
+        currentStory = await StoryAPI.story(decodeURIComponent(arg || ''));
+        if (currentStory.status === 'published') await StoryAPI.view(currentStory.id).catch(() => {});
+        $('#app').innerHTML = reader(currentStory);
+      }
     } else if (page === 'explore') {
       browseState = { category: arg || '', query: '', sort: 'latest' };
       stories = await StoryAPI.stories({ ...browseState, from: 0, to: 11 });
@@ -1084,7 +1089,7 @@ async function route() {
     scrollTo(0, 0);
     bind();
 
-    if (page === 'story' && currentStory.status === 'published') {
+    if (page === 'story' && currentStory?.status === 'published') {
       loadComments().catch(error => console.error('Could not load comments', error));
       StoryAPI.markRead(currentStory.id, 10);
     }
@@ -1637,7 +1642,12 @@ async function handleAuth(event) {
       await StoryAPI.signIn($('#authEmail').value, $('#authPassword').value);
     }
     session = await StoryAPI.session();
-    location.hash = 'home';
+    let redirect = 'home';
+    try {
+      redirect = sessionStorage.getItem('storyteller.redirectAfterAuth') || 'home';
+      sessionStorage.removeItem('storyteller.redirectAfterAuth');
+    } catch {}
+    location.hash = redirect.replace(/^#?/, '');
   } catch (error) {
     authFail(error);
   }
