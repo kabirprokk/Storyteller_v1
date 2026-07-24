@@ -24,7 +24,7 @@ Storyteller is a responsive writing and reading platform built as a static singl
 - Email/password and social authentication
 - Public Reader and Writer account roles, with administrator accounts created privately by the developer
 - Reader accounts with reading history, likes, bookmarks, comments, follows, and reports
-- Writer onboarding with required Gmail and contact source, plus an optional donation QR that can be added later
+- Writer onboarding with required Gmail, optional contact source, optional Instagram handle, and an optional donation QR that can be added later
 - Rich editor with live preview, autosave, TXT import, tags, categories, and cover uploads
 - Draft and publication workflows with publication-integrity safeguards
 - Recently published, featured, trending, search, sorting, and category discovery
@@ -101,7 +101,7 @@ Open `http://localhost:8000`. A `file://` URL is not recommended because browser
 supabase functions deploy record-story-view --no-verify-jwt
 ```
 
-Apply `202607240001_reader_writer_roles.sql`, `202607240002_restore_reader_interactions.sql`, and `202607240003_reader_become_writer.sql` after the earlier migrations. New public accounts can choose only Reader or Writer, and Reader accounts can later upgrade themselves to Writer from their profile after adding the required Gmail and contact source. Social sign-in creates a Reader account by default. Administrator roles are never offered through public signup and continue to be assigned privately by the developer.
+Apply `202607240001_reader_writer_roles.sql`, `202607240002_restore_reader_interactions.sql`, `202607240003_reader_become_writer.sql`, and `202607240004_optional_contact_instagram.sql` after the earlier migrations. New public accounts can choose only Reader or Writer, and Reader accounts can later upgrade themselves to Writer from their profile after adding the required Gmail. Contact source and Instagram handle are optional. Social sign-in creates a Reader account by default. Administrator roles are never offered through public signup and continue to be assigned privately by the developer.
 
 `SUPABASE_SERVICE_ROLE_KEY`, `VIEW_COUNT_SALT`, database passwords, and access tokens must never be placed in browser code or committed to Git. Hosted Supabase functions receive server credentials through protected environment variables.
 

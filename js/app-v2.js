@@ -65,6 +65,10 @@ const contactSourceLink = value => {
     return `<span class="btn disabled">${esc(source)}</span>`;
   }
 };
+const instagramLink = value => {
+  const handle = String(value || '').trim().replace(/^@/, '');
+  return handle ? `<a class="btn" href="https://www.instagram.com/${encodeURIComponent(handle)}/" target="_blank" rel="noopener noreferrer">Instagram @${esc(handle)}</a>` : '';
+};
 const stripHtml = value => String(value ?? '').replace(/<[^>]*>/g, ' ');
 const words = value => String(value ?? '').trim().split(/\s+/).filter(Boolean).length;
 const img = story => esc(story?.cover || 'assets/hero.png');
@@ -392,6 +396,7 @@ function reader(story) {
               : `<button class="btn followAuthor" data-username="${esc(story.username)}">Follow</button>`}
             ${story.authorContactEmail ? `<a class="btn" href="mailto:${esc(story.authorContactEmail)}">Email writer</a>` : ''}
             ${contactSourceLink(story.authorContactSource)}
+            ${instagramLink(story.authorInstagram)}
             ${story.authorDonationQr && !(story.isOwn || (session && session.user.id === story.authorId)) ? `<button class="btn openWriterDonation" data-qr="${esc(story.authorDonationQr)}" data-writer="${esc(story.author)}"><span aria-hidden="true">&#9825;</span> Support writer</button>` : ''}
             ${isPublished ? '<button class="btn reportStory">Report</button>' : '<span class="btn disabled">Private draft</span>'}
           </div>
@@ -460,7 +465,8 @@ function write(story = null) {
         <div class="field"><label>Display name</label><input value="${esc(session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || '')}" readonly></div>
         <div class="field"><label>Login email</label><input value="${esc(session.user.email || '')}" readonly></div>
         <div class="field"><label>Writer Gmail address ending in @gmail.com</label><input id="becomeWriterEmail" type="email" placeholder="yourname@gmail.com"></div>
-        <div class="field"><label>Contact source, such as a website, portfolio, or social profile</label><input id="becomeWriterSource" maxlength="300" placeholder="Website, portfolio, or social profile URL"></div>
+        <div class="field"><label>Contact source (optional)</label><input id="becomeWriterSource" maxlength="300" placeholder="Website, portfolio, or social profile URL"></div>
+        <div class="field"><label>Instagram handle (optional)</label><input id="becomeWriterInstagram" maxlength="30" placeholder="your_instagram"></div>
         <button id="becomeWriter" class="btn primary" type="button">Upgrade to Writer</button>
       </div>
     </div>
@@ -547,7 +553,8 @@ function auth(mode = 'signin', msg = '') {
           </fieldset>
           <div id="writerSignupFields" ${writerSignup ? '' : 'hidden'}>
             <div class="field"><label>Writer Gmail address ending in @gmail.com</label><input id="writerGmail" type="email" autocomplete="email" placeholder="yourname@gmail.com" ${writerSignup ? 'required' : ''}></div>
-            <div class="field"><label>Contact source, such as a website, portfolio, or social profile</label><input id="writerContactSource" maxlength="300" placeholder="Website, portfolio, or social profile URL" ${writerSignup ? 'required' : ''}></div>
+            <div class="field"><label>Contact source (optional)</label><input id="writerContactSource" maxlength="300" placeholder="Website, portfolio, or social profile URL"></div>
+            <div class="field"><label>Instagram handle (optional)</label><input id="writerInstagram" maxlength="30" placeholder="your_instagram"></div>
             <small>Your payment QR is optional and can be added later from your Writer profile.</small>
           </div>
         ` : ''}
@@ -622,15 +629,17 @@ async function profile(tab = 'published') {
         <div class="field"><label>Bio</label><textarea id="profileBio" maxlength="500">${esc(me.bio)}</textarea></div>
         <div class="field"><label>Avatar</label><input id="profileAvatar" type="file" accept="image/jpeg,image/png,image/webp"></div>
         ${writer ? `<div class="field"><label>Writer Gmail</label><input id="profileContactEmail" type="email" value="${esc(me.contact_email || '')}" placeholder="yourname@gmail.com"></div>
-        <div class="field"><label>Contact source</label><input id="profileContactSource" maxlength="300" value="${esc(me.contact_source || '')}" placeholder="Website, portfolio, or social profile URL"></div>` : ''}
+        <div class="field"><label>Contact source (optional)</label><input id="profileContactSource" maxlength="300" value="${esc(me.contact_source || '')}" placeholder="Website, portfolio, or social profile URL"></div>
+        <div class="field"><label>Instagram handle (optional)</label><input id="profileInstagram" maxlength="30" value="${esc(me.instagram_handle || '')}" placeholder="your_instagram"></div>` : ''}
         <button class="btn primary saveProfile">Save profile</button>
         ${!writer ? `<div class="writer-donation-settings become-writer-panel">
           <div>
             <span class="eyebrow">Start publishing</span>
             <h3>Become a writer</h3>
-            <p>Reader accounts can be upgraded instantly. Add a Gmail address and a contact source so readers and moderators can identify your public writer profile.</p>
+            <p>Reader accounts can be upgraded instantly. Add a Gmail address to unlock publishing. Contact source and Instagram are optional public profile details.</p>
             <div class="field"><label>Writer Gmail</label><input id="becomeWriterEmail" type="email" placeholder="yourname@gmail.com"></div>
-            <div class="field"><label>Contact source</label><input id="becomeWriterSource" maxlength="300" placeholder="Website, portfolio, or social profile URL"></div>
+            <div class="field"><label>Contact source (optional)</label><input id="becomeWriterSource" maxlength="300" placeholder="Website, portfolio, or social profile URL"></div>
+            <div class="field"><label>Instagram handle (optional)</label><input id="becomeWriterInstagram" maxlength="30" placeholder="your_instagram"></div>
             <button id="becomeWriter" class="btn primary" type="button">Upgrade to Writer</button>
           </div>
           <div class="writer-qr-preview"><strong>Writer tools</strong><small>Drafts, publishing, and optional donation QR unlock after upgrade.</small></div>
@@ -1272,7 +1281,6 @@ $('#comment')?.addEventListener('click', async () => {
     if (!fields) return;
     fields.hidden = !writerSelected;
     $('#writerGmail').required = writerSelected;
-    $('#writerContactSource').required = writerSelected;
   }));
   $('.resetForm')?.addEventListener('submit', handlePasswordReset);
   $$('.social').forEach(button => button.onclick = () => StoryAPI.social(button.dataset.provider).catch(authFail));
@@ -1380,15 +1388,17 @@ async function becomeWriter(event) {
   const button = event?.currentTarget;
   const email = $('#becomeWriterEmail')?.value.trim().toLowerCase() || '';
   const source = $('#becomeWriterSource')?.value.trim() || '';
+  const instagram = ($('#becomeWriterInstagram')?.value.trim() || '').replace(/^@/, '');
   if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@gmail\.com$/i.test(email)) return toast('Enter a valid Gmail address');
-  if (source.length < 3) return toast('Add a contact source');
+  if (source && source.length < 3) return toast('Contact source must be at least 3 characters');
+  if (instagram && !/^[a-z0-9._]{1,30}$/i.test(instagram)) return toast('Enter a valid Instagram handle');
 
   try {
     if (button) {
       button.disabled = true;
       button.textContent = 'Upgrading...';
     }
-    const updatedProfile = await StoryAPI.becomeWriter(email, source);
+    const updatedProfile = await StoryAPI.becomeWriter(email, source, instagram);
     accountRole = updatedProfile?.role || 'writer';
     await syncNavbarAvatar(updatedProfile);
     toast('Writer tools unlocked');
@@ -1417,6 +1427,7 @@ async function saveProfile() {
       ...(hasWriterAccess() && {
         contact_email: $('#profileContactEmail')?.value.trim().toLowerCase() || null,
         contact_source: $('#profileContactSource')?.value.trim() || null,
+        instagram_handle: ($('#profileInstagram')?.value.trim() || '').replace(/^@/, '') || null,
       }),
       ...(avatar && { avatar_url: avatar }),
     });
@@ -1468,9 +1479,11 @@ async function handleAuth(event) {
       const selectedRole = $('input[name="accountRole"]:checked')?.value || 'reader';
       const writerGmail = $('#writerGmail')?.value.trim() || '';
       const contactSource = $('#writerContactSource')?.value.trim() || '';
+      const instagram = ($('#writerInstagram')?.value.trim() || '').replace(/^@/, '');
       if (selectedRole === 'writer' && !/^[^\s@]+@gmail\.com$/i.test(writerGmail)) throw new Error('Writers must provide a valid Gmail address');
-      if (selectedRole === 'writer' && contactSource.length < 3) throw new Error('Writers must provide a contact source');
-      const data = await StoryAPI.signUp($('#authEmail').value, $('#authPassword').value, $('#authName').value, selectedRole, writerGmail, contactSource);
+      if (selectedRole === 'writer' && contactSource && contactSource.length < 3) throw new Error('Contact source must be at least 3 characters');
+      if (selectedRole === 'writer' && instagram && !/^[a-z0-9._]{1,30}$/i.test(instagram)) throw new Error('Enter a valid Instagram handle');
+      const data = await StoryAPI.signUp($('#authEmail').value, $('#authPassword').value, $('#authName').value, selectedRole, writerGmail, contactSource, instagram);
       toast(data.session ? 'Account created' : 'Verify your email');
     } else {
       await StoryAPI.signIn($('#authEmail').value, $('#authPassword').value);
