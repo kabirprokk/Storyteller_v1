@@ -150,6 +150,7 @@ body.light .control-row button:hover{background:#11111108}
 .reader-tools #readerMode{width:42px}
 .reader-tools .icon-btn svg{width:19px;height:19px}
 .auth-card .brand-mark{width:30px;height:30px}
+.role-picker{border:0;padding:0;margin:18px 0}.role-picker legend{font-size:12px;color:var(--muted);margin-bottom:9px}.role-picker label{display:flex;gap:10px;align-items:flex-start;padding:13px;margin:8px 0;border:1px solid var(--line);border-radius:12px;cursor:pointer}.role-picker label:has(input:checked){border-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 9%,transparent)}.role-picker input{margin-top:4px;accent-color:var(--accent)}.role-picker span,.role-picker b,.role-picker small{display:block}.role-picker small,#writerSignupFields>small{margin-top:3px;color:var(--muted);line-height:1.45}#writerSignupFields[hidden],[data-writer-only][hidden]{display:none!important}
 
 body{color-scheme:dark;overflow-x:hidden}
 body.light{color-scheme:light}

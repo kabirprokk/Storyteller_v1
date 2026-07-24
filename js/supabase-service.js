@@ -24,7 +24,7 @@
   const normalize = row => ({
     id: row.id, slug: row.slug, title: row.title, desc: row.subtitle || '',
     author: row.author_name || row.profiles?.display_name || 'Unknown writer', ini: (row.author_name || row.profiles?.display_name || 'ST').split(/\s+/).map(x => x[0]).slice(0,2).join('').toUpperCase(),
-    authorId: row.author_id, username: row.author_username || row.profiles?.username, authorAvatar: row.author_avatar_url || row.profiles?.avatar_url || '', authorDonationQr: row.author_donation_qr_url || row.profiles?.donation_qr_url || '', cat: row.category_name || row.categories?.name || 'Uncategorized',
+    authorId: row.author_id, username: row.author_username || row.profiles?.username, authorAvatar: row.author_avatar_url || row.profiles?.avatar_url || '', authorDonationQr: row.author_donation_qr_url || row.profiles?.donation_qr_url || '', authorContactEmail: row.author_contact_email || row.profiles?.contact_email || '', authorContactSource: row.author_contact_source || row.profiles?.contact_source || '', cat: row.category_name || row.categories?.name || 'Uncategorized',
     categoryId: row.category_id, time: `${row.reading_minutes || 1} min read`, likes: row.likes?.[0]?.count || row.like_count || 0,
     views: row.view_count || 0, date: row.published_at ? new Date(row.published_at).toLocaleDateString(undefined,{month:'short',day:'numeric'}) : 'Draft',
     publishedAt: row.published_at || null,
@@ -37,7 +37,7 @@
     client, configured,
     async session() { if (!client) return null; const {data} = await client.auth.getSession(); return data.session; },
     onAuthChange(fn) { return client?.auth.onAuthStateChange((event, session) => fn(session,event)); },
-    async signUp(email,password,displayName) { const {data,error}=await required().auth.signUp({email,password,options:{data:{display_name:displayName.trim(),username:usernameFromName(displayName)}}}); if(error)throw error; return data; },
+    async signUp(email,password,displayName,role='reader',contactEmail='',contactSource='') { const publicRole=role==='writer'?'writer':'reader';const metadata={display_name:displayName.trim(),username:usernameFromName(displayName),role:publicRole};if(publicRole==='writer'){metadata.contact_email=contactEmail.trim().toLowerCase();metadata.contact_source=contactSource.trim();}const {data,error}=await required().auth.signUp({email,password,options:{data:metadata}});if(error)throw error;return data; },
     async signIn(email,password) { const {data,error}=await required().auth.signInWithPassword({email,password}); if(error)throw error; return data; },
     async social(provider) { const {error}=await required().auth.signInWithOAuth({provider,options:{redirectTo:location.href.split('#')[0]}}); if(error)throw error; },
     async resetPassword(email) { const {error}=await required().auth.resetPasswordForEmail(email,{redirectTo:location.href.split('#')[0]}); if(error)throw error; },

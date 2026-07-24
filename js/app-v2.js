@@ -14,6 +14,7 @@ let readTimer = null;
 let filterRequest = 0;
 let heroTimer = null;
 let adminMode = false;
+let accountRole = 'guest';
 let likedStoryIds = new Set();
 let bookmarkedStoryIds = new Set();
 const logo = 'assets/storyteller-mark.png';
@@ -52,6 +53,18 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
 
 const dateTime = value => value ? new Date(value).toLocaleString() : 'Not available';
 const providerNames = value => Array.isArray(value) ? value.join(', ') : (value || 'Email');
+const hasWriterAccess = () => accountRole === 'writer' || accountRole === 'admin';
+const contactSourceLink = value => {
+  const source = String(value || '').trim();
+  if (!source) return '';
+  try {
+    const url = new URL(source);
+    if (!['http:', 'https:'].includes(url.protocol)) return '';
+    return `<a class="btn" href="${esc(url.href)}" target="_blank" rel="noopener noreferrer">Contact source</a>`;
+  } catch {
+    return `<span class="btn disabled">${esc(source)}</span>`;
+  }
+};
 const stripHtml = value => String(value ?? '').replace(/<[^>]*>/g, ' ');
 const words = value => String(value ?? '').trim().split(/\s+/).filter(Boolean).length;
 const img = story => esc(story?.cover || 'assets/hero.png');
@@ -152,7 +165,7 @@ const card = story => {
       <div class="cover">
         <img src="${img(story)}" loading="lazy" alt="Cover for ${esc(story.title)}">
         <span class="pill">${esc(story.cat)}</span>
-        <button class="save icon-btn ${bookmarkedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Bookmark ${esc(story.title)}" aria-pressed="${bookmarkedStoryIds.has(story.id)}">${icons.bookmark}</button>
+        ${hasWriterAccess() ? `<button class="save icon-btn ${bookmarkedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Bookmark ${esc(story.title)}" aria-pressed="${bookmarkedStoryIds.has(story.id)}">${icons.bookmark}</button>` : ''}
       </div>
       <h3><a href="${destination}">${esc(story.title)}</a></h3>
       <p>${esc(story.desc)}</p>
@@ -186,7 +199,7 @@ const footer = () => `
         </div>
         <div>
           <h5>CREATE</h5>
-          <a href="#write">Write</a>
+          ${hasWriterAccess() ? '<a href="#write">Write</a>' : ''}
           <a href="#profile">Profile</a>
         </div>
         <div>
@@ -240,8 +253,8 @@ function home() {
             <h1>Every Story<br>Deserves to Be <em>Told.</em></h1>
             <p>A home for honest voices, untold worlds, and the beautiful mess of being human.</p>
             <div class="buttons">
-              <a class="btn primary" href="${heroStory ? '#explore' : '#write'}">${heroStory ? 'Start reading' : 'Write the first story'} →</a>
-              <a class="btn" href="#write">Write your story</a>
+              <a class="btn primary" href="${heroStory || !hasWriterAccess() ? '#explore' : '#write'}">${heroStory || !hasWriterAccess() ? 'Start reading' : 'Write the first story'} →</a>
+              ${hasWriterAccess() ? '<a class="btn" href="#write">Write your story</a>' : ''}
             </div>
           </div>
         </div>
@@ -376,16 +389,18 @@ function reader(story) {
           <div class="author-actions">
             ${story.isOwn || (session && session.user.id === story.authorId)
               ? '<span class="btn disabled">Your story</span>'
-              : `<button class="btn followAuthor" data-username="${esc(story.username)}">Follow</button>`}
+              : hasWriterAccess() ? `<button class="btn followAuthor" data-username="${esc(story.username)}">Follow</button>` : ''}
+            ${story.authorContactEmail ? `<a class="btn" href="mailto:${esc(story.authorContactEmail)}">Email writer</a>` : ''}
+            ${contactSourceLink(story.authorContactSource)}
             ${story.authorDonationQr && !(story.isOwn || (session && session.user.id === story.authorId)) ? `<button class="btn openWriterDonation" data-qr="${esc(story.authorDonationQr)}" data-writer="${esc(story.author)}"><span aria-hidden="true">&#9825;</span> Support writer</button>` : ''}
-            ${isPublished ? '<button class="btn reportStory">Report</button>' : '<span class="btn disabled">Private draft</span>'}
+            ${isPublished && hasWriterAccess() ? '<button class="btn reportStory">Report</button>' : !isPublished ? '<span class="btn disabled">Private draft</span>' : ''}
           </div>
         </div>
       </div>
 
       <div class="reader-tools">
-        <button class="like icon-btn ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Like" aria-pressed="${likedStoryIds.has(story.id)}">${icons.heart}</button>
-        <button class="bookmark icon-btn ${bookmarkedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Bookmark" aria-pressed="${bookmarkedStoryIds.has(story.id)}">${icons.bookmark}</button>
+        ${hasWriterAccess() ? `<button class="like icon-btn ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Like" aria-pressed="${likedStoryIds.has(story.id)}">${icons.heart}</button>` : ''}
+        ${hasWriterAccess() ? `<button class="bookmark icon-btn ${bookmarkedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Bookmark" aria-pressed="${bookmarkedStoryIds.has(story.id)}">${icons.bookmark}</button>` : ''}
         ${story.authorDonationQr && !(story.isOwn || (session && session.user.id === story.authorId)) ? `<button class="writer-donate-tool openWriterDonation icon-btn" data-qr="${esc(story.authorDonationQr)}" data-writer="${esc(story.author)}" aria-label="Donate to ${esc(story.author)}" title="Support this writer">${icons.donate}</button>` : ''}
         <button id="font" class="icon-btn" aria-label="Adjust font size"><span>Aa</span></button>
         <button id="readerMode" class="icon-btn" aria-label="Toggle reading mode">${icons.theme}</button>
@@ -396,7 +411,7 @@ function reader(story) {
         <div class="reader-end">
           <span class="eyebrow">The end</span>
           <h2>Did this story move you?</h2>
-          <button class="btn primary like ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-pressed="${likedStoryIds.has(story.id)}"><span class="btn-icon">${icons.heart}</span><span>Appreciate · ${story.likes}</span></button>
+          ${hasWriterAccess() ? `<button class="btn primary like ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-pressed="${likedStoryIds.has(story.id)}"><span class="btn-icon">${icons.heart}</span><span>Appreciate · ${story.likes}</span></button>` : '<p class="meta">Keep reading. More stories are waiting for you.</p>'}
           <div class="story-nav">
             ${prev ? `<a class="btn" href="#story/${prev.slug}">Previous story</a>` : '<span class="btn disabled">Previous story</span>'}
             ${next ? `<a class="btn" href="#story/${next.slug}">Next story</a>` : '<span class="btn disabled">Next story</span>'}
@@ -423,11 +438,11 @@ function reader(story) {
             <h2>Comments</h2>
           </div>
         </div>
-        ${isPublished ? `
+        ${isPublished && hasWriterAccess() ? `
           <div id="commentList"></div>
           <textarea id="commentBody" maxlength="2000" placeholder="Leave a thoughtful response..."></textarea>
           <button class="btn primary" id="comment">Post comment</button>
-        ` : empty('Comments locked', 'Publish this draft to start a conversation.')}
+        ` : isPublished ? '<div id="commentList"></div>' : empty('Comments locked', 'Publish this draft to start a conversation.')}
       </div>
     </article>
   `;
@@ -435,6 +450,7 @@ function reader(story) {
 
 function write(story = null) {
   if (!session) return auth('signin', 'Sign in to write and publish.');
+  if (!hasWriterAccess()) return `<div class="page auth-wrap">${empty('Writer access required', 'Reader accounts can enjoy stories. Create a Writer account to publish your own work.')}</div>`;
 
   editingStory = story;
   draftId = story?.id || null;
@@ -505,8 +521,21 @@ function auth(mode = 'signin', msg = '') {
         <p>${esc(msg || 'Read, write, save, and join the conversation.')}</p>
         <button type="button" class="social" data-provider="google">Continue with Google</button>
         <button type="button" class="social" data-provider="github">Continue with GitHub</button>
+        ${signup ? '<small>Social signup creates a Reader account. Choose email signup below to become a Writer.</small>' : ''}
         <div class="divider">or use email</div>
         ${signup ? '<div class="field"><label>Display name</label><input id="authName" required maxlength="80"></div>' : ''}
+        ${signup ? `
+          <fieldset class="role-picker">
+            <legend>Choose your role</legend>
+            <label><input type="radio" name="accountRole" value="reader" checked><span><b>Reader</b><small>Read and discover stories.</small></span></label>
+            <label><input type="radio" name="accountRole" value="writer"><span><b>Writer</b><small>Write, publish, and manage your own stories.</small></span></label>
+          </fieldset>
+          <div id="writerSignupFields" hidden>
+            <div class="field"><label>Writer Gmail</label><input id="writerGmail" type="email" autocomplete="email" placeholder="yourname@gmail.com"></div>
+            <div class="field"><label>Contact source</label><input id="writerContactSource" maxlength="300" placeholder="Website, portfolio, or social profile URL"></div>
+            <small>Your payment QR is optional and can be added later from your Writer profile.</small>
+          </div>
+        ` : ''}
         <div class="field"><label>Email</label><input id="authEmail" type="email" required></div>
         <div class="field"><label>Password</label><input id="authPassword" type="password" required minlength="8"></div>
         <button class="btn primary authSubmit">${signup ? 'Create account' : 'Sign in'}</button>
@@ -522,11 +551,16 @@ function auth(mode = 'signin', msg = '') {
 async function profile(tab = 'published') {
   const me = await StoryAPI.profile();
   if (!me) return auth();
+  accountRole = me.role || 'reader';
   await syncNavbarAvatar(me);
 
-  const mine = tab === 'published' ? await StoryAPI.myStories('published') : await StoryAPI.library(tab);
+  const writer = hasWriterAccess();
+  const activeTab = writer ? tab : 'history';
+  const mine = writer
+    ? (activeTab === 'published' ? await StoryAPI.myStories('published') : await StoryAPI.library(activeTab))
+    : await StoryAPI.library('history');
   const items = mine.map(story => {
-    if (tab === 'drafts') {
+    if (activeTab === 'drafts') {
       return `
         <article class="story">
           <div class="cover">
@@ -552,7 +586,7 @@ async function profile(tab = 'published') {
             ${me.avatar_url ? `<img src="${esc(me.avatar_url)}" alt="">` : esc(me.display_name.split(/\s+/).map(part => part[0]).slice(0, 2).join(''))}
           </div>
           <div>
-            <span class="eyebrow">Writer profile</span>
+            <span class="eyebrow">${writer ? 'Writer profile' : 'Reader profile'}</span>
             <h1 class="page-title">${esc(me.display_name)}</h1>
             <p class="subtitle">${esc(me.bio || 'Your story is still being written.')}</p>
             <p class="meta">@${esc(me.username)} · ${esc(me.role)}</p>
@@ -570,8 +604,10 @@ async function profile(tab = 'published') {
         <div class="field"><label>Username</label><input id="profileUsername" maxlength="30" value="${esc(me.username)}"></div>
         <div class="field"><label>Bio</label><textarea id="profileBio" maxlength="500">${esc(me.bio)}</textarea></div>
         <div class="field"><label>Avatar</label><input id="profileAvatar" type="file" accept="image/jpeg,image/png,image/webp"></div>
+        ${writer ? `<div class="field"><label>Writer Gmail</label><input id="profileContactEmail" type="email" value="${esc(me.contact_email || '')}" placeholder="yourname@gmail.com"></div>
+        <div class="field"><label>Contact source</label><input id="profileContactSource" maxlength="300" value="${esc(me.contact_source || '')}" placeholder="Website, portfolio, or social profile URL"></div>` : ''}
         <button class="btn primary saveProfile">Save profile</button>
-        <div class="writer-donation-settings">
+        ${writer ? `<div class="writer-donation-settings">
           <div>
             <span class="eyebrow">Reader support</span>
             <h3>Writer donation QR</h3>
@@ -581,16 +617,16 @@ async function profile(tab = 'published') {
             ${me.donation_qr_url ? '<button id="removeWriterDonationQr" class="btn danger" type="button">Remove QR</button>' : ''}
           </div>
           <div class="writer-qr-preview">${me.donation_qr_url ? `<img src="${esc(me.donation_qr_url)}" alt="Your current writer donation QR code"><small>Visible to readers</small>` : '<strong>Not enabled</strong><small>No QR code is public</small>'}</div>
-        </div>
+        </div>` : ''}
       </div>
 
       <section>
         <div class="container">
           <div class="chips profile-tabs">
-            ${[['published', 'Published'], ['drafts', 'Drafts'], ['liked', 'Liked'], ['bookmarks', 'Bookmarks'], ['history', 'History']]
-              .map(item => `<a class="chip ${tab === item[0] ? 'active' : ''}" href="#profile/${item[0]}">${item[1]}</a>`).join('')}
+            ${(writer ? [['published', 'Published'], ['drafts', 'Drafts'], ['liked', 'Liked'], ['bookmarks', 'Bookmarks'], ['history', 'History']] : [['history', 'Reading history']])
+              .map(item => `<a class="chip ${activeTab === item[0] ? 'active' : ''}" href="#profile/${item[0]}">${item[1]}</a>`).join('')}
           </div>
-          <div class="grid profile-grid">${items || empty('Nothing here yet', tab === 'drafts' ? 'Your saved drafts appear here.' : 'Your library will grow as you read.')}</div>
+          <div class="grid profile-grid">${items || empty('Nothing here yet', activeTab === 'drafts' ? 'Your saved drafts appear here.' : 'Your reading history will grow as you explore.')}</div>
         </div>
       </section>
       ${footer()}
@@ -1202,6 +1238,14 @@ $('#comment')?.addEventListener('click', async () => {
     else navigator.clipboard.writeText(location.href).then(() => toast('Link copied'));
   });
   $('.auth-card:not(.resetForm)')?.addEventListener('submit', handleAuth);
+  $$('input[name="accountRole"]').forEach(input => input.addEventListener('change', () => {
+    const writerSelected = $('input[name="accountRole"]:checked')?.value === 'writer';
+    const fields = $('#writerSignupFields');
+    if (!fields) return;
+    fields.hidden = !writerSelected;
+    $('#writerGmail').required = writerSelected;
+    $('#writerContactSource').required = writerSelected;
+  }));
   $('.resetForm')?.addEventListener('submit', handlePasswordReset);
   $$('.social').forEach(button => button.onclick = () => StoryAPI.social(button.dataset.provider).catch(authFail));
   $('.authMode')?.addEventListener('click', () => location.hash = location.hash.includes('signup') ? 'auth/signin' : 'auth/signup');
@@ -1308,6 +1352,10 @@ async function saveProfile() {
       display_name: $('#profileName').value.trim(),
       username: $('#profileUsername').value.trim().toLowerCase(),
       bio: $('#profileBio').value.trim(),
+      ...(hasWriterAccess() && {
+        contact_email: $('#profileContactEmail')?.value.trim().toLowerCase() || null,
+        contact_source: $('#profileContactSource')?.value.trim() || null,
+      }),
       ...(avatar && { avatar_url: avatar }),
     });
 
@@ -1355,7 +1403,12 @@ async function handleAuth(event) {
   event.preventDefault();
   try {
     if (location.hash.includes('signup')) {
-      const data = await StoryAPI.signUp($('#authEmail').value, $('#authPassword').value, $('#authName').value);
+      const selectedRole = $('input[name="accountRole"]:checked')?.value || 'reader';
+      const writerGmail = $('#writerGmail')?.value.trim() || '';
+      const contactSource = $('#writerContactSource')?.value.trim() || '';
+      if (selectedRole === 'writer' && !/^[^\s@]+@gmail\.com$/i.test(writerGmail)) throw new Error('Writers must provide a valid Gmail address');
+      if (selectedRole === 'writer' && contactSource.length < 3) throw new Error('Writers must provide a contact source');
+      const data = await StoryAPI.signUp($('#authEmail').value, $('#authPassword').value, $('#authName').value, selectedRole, writerGmail, contactSource);
       toast(data.session ? 'Account created' : 'Verify your email');
     } else {
       await StoryAPI.signIn($('#authEmail').value, $('#authPassword').value);
@@ -1449,6 +1502,8 @@ async function syncNavbarAvatar(profile = null) {
   const button = $('#navAvatar');
   if (!button) return;
   if (!session) {
+    accountRole = 'guest';
+    syncRoleNavigation();
     button.classList.remove('has-image');
     button.textContent = 'ST';
     button.title = 'Sign in or create an account';
@@ -1459,6 +1514,8 @@ async function syncNavbarAvatar(profile = null) {
   try {
     const person = profile || await StoryAPI.profile();
     if (!person || session?.user.id !== userId) return;
+    accountRole = person.role || 'reader';
+    syncRoleNavigation();
     const initials = person.display_name?.split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase() || 'ST';
     button.classList.toggle('has-image', Boolean(person.avatar_url));
     button.innerHTML = person.avatar_url
@@ -1468,6 +1525,10 @@ async function syncNavbarAvatar(profile = null) {
   } catch (error) {
     console.error('Unable to load navbar avatar', error);
   }
+}
+
+function syncRoleNavigation() {
+  $$('[data-writer-only]').forEach(node => { node.hidden = !hasWriterAccess(); });
 }
 
 function authFail(error) {
@@ -1660,12 +1721,16 @@ addEventListener('scroll', () => {
 (async () => {
   if (StoryAPI.configured) {
     session = await StoryAPI.session();
+    accountRole = session ? ((await StoryAPI.profile())?.role || 'reader') : 'guest';
     await refresh();
     adminMode = session ? await StoryAPI.isAdmin() : false;
+    syncRoleNavigation();
     await syncNavbarAvatar();
     StoryAPI.onAuthChange(async (nextSession, event) => {
       session = nextSession;
+      accountRole = nextSession ? ((await StoryAPI.profile())?.role || 'reader') : 'guest';
       adminMode = nextSession ? await StoryAPI.isAdmin() : false;
+      syncRoleNavigation();
       await syncNavbarAvatar();
       if (event === 'PASSWORD_RECOVERY') location.hash = 'reset-password';
       route();
