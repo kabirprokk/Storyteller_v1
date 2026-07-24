@@ -29,7 +29,7 @@ Storyteller is a responsive writing and reading platform built as a static singl
 - Public writer profiles, global avatars, follows, and notifications
 - Responsive dark and light themes
 - Optional low-volume local theme music, mute control, click feedback, and stateful interaction icons
-- Session-only human-verification gate with 512 local sentence combinations and typing-rhythm checks
+- Session-only human-verification gate with 512 local three-word combinations and typing-rhythm checks
 - Role-protected administration with expandable account records, report evidence, moderation controls, and metrics
 - Integrated Help Centre for questions, problem reports, suggestions, and administrator email
 - Direct QR donations for the developer and individual writers with no payment-platform integration
@@ -102,7 +102,7 @@ supabase functions deploy record-story-view --no-verify-jwt
 
 ## Human verification
 
-The entry gate is built entirely with local HTML, CSS, and vanilla JavaScript. It combines 512 unique sentence combinations with a minimum reading delay, exact character matching, typing-speed checks, typing-rhythm checks, and short-lived passive interaction analysis. Behavior samples remain only in memory and are discarded when the gate closes; a successful result is remembered only in `sessionStorage`, so it lasts for the current browser tab session.
+The entry gate is built entirely with local HTML, CSS, and vanilla JavaScript. It combines 512 unique three-word combinations with a minimum reading delay, exact character matching, typing-speed checks, typing-rhythm checks, and short-lived passive interaction analysis. Behavior samples remain only in memory and are discarded when the gate closes; a successful result is remembered only in `sessionStorage`, so it lasts for the current browser tab session.
 
 This feature adds friction for basic automation; it is not a security boundary because all client-side code can be inspected or bypassed. Authorization, ownership, roles, and protected data remain enforced by Supabase Row Level Security and server-side functions.
 

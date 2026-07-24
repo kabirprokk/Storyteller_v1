@@ -198,38 +198,38 @@
     };
   }
 
-  // Eight fragments per group create 512 unique challenges, each 50-55 characters.
+  // Eight single-word fragments per group create 512 unique three-word challenges.
   const OPENINGS = Object.freeze([
-    'Quiet readers seek',
-    'Patient minds find',
-    'Kind writers share',
-    'Calm travelers see',
-    'Open windows frame',
-    'Soft mornings wake',
-    'Warm lanterns glow',
-    'Old stories return',
+    'Quiet',
+    'Patient',
+    'Kind',
+    'Calm',
+    'Curious',
+    'Gentle',
+    'Brave',
+    'Thoughtful',
   ]);
 
   const MIDDLES = Object.freeze([
-    'under moonlight',
-    'beside old roads',
-    'through soft rain',
-    'among tall trees',
-    'before sunrise',
-    'where winds rise',
-    'as bells echo now',
-    'while rivers turn',
+    'readers',
+    'writers',
+    'dreamers',
+    'travelers',
+    'voices',
+    'stories',
+    'lanterns',
+    'rivers',
   ]);
 
   const ENDINGS = Object.freeze([
-    'and wonder stays',
-    'before dawn comes',
-    'where hopes grow',
-    'as stars appear',
-    'and dreams begin',
-    'while earth rests',
-    'where voices meet',
-    'and light returns',
+    'wander',
+    'gather',
+    'bloom',
+    'return',
+    'listen',
+    'remember',
+    'rise',
+    'endure',
   ]);
 
   const SENTENCES = Object.freeze(OPENINGS.flatMap(opening =>
@@ -299,7 +299,7 @@
     const heading = element('header', 'data-human-heading');
     const sentenceWrap = element('div', 'data-human-sentence-wrap');
     const sentenceDisplay = element('div', 'data-human-sentence');
-    const inputWrap = element('label', 'data-human-label', 'Type the sentence exactly');
+    const inputWrap = element('label', 'data-human-label', 'Type the words exactly');
     const input = element('input', 'data-human-input');
     const progress = element('div', 'data-human-progress');
     const track = element('span', 'data-human-track');
@@ -326,11 +326,11 @@
 
     card.id = id('form');
     card.autocomplete = 'off';
-    heading.innerHTML = `<span class="eyebrow">A brief pause</span><h2 id="${titleId}">Made for human hands.</h2><p id="${descriptionId}">Type the line below naturally to enter Storyteller.</p>`;
+    heading.innerHTML = `<span class="eyebrow">A brief pause</span><h2 id="${titleId}">Made for human hands.</h2><p id="${descriptionId}">Type the short phrase below naturally to enter Storyteller.</p>`;
 
     sentenceDisplay.id = sentenceId;
     sentenceDisplay.setAttribute('role', 'text');
-    sentenceDisplay.setAttribute('aria-label', 'Sentence to type');
+    sentenceDisplay.setAttribute('aria-label', 'Phrase to type');
     sentenceDisplay.draggable = false;
     sentenceWrap.append(sentenceDisplay);
 
