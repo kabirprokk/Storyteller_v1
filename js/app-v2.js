@@ -436,7 +436,7 @@ function reader(story) {
             ${story.isOwn || (session && session.user.id === story.authorId)
               ? '<span class="btn disabled">Your story</span>'
               : `<button class="btn followAuthor" data-username="${esc(story.username)}">Follow</button>`}
-            ${story.authorContactEmail ? `<a class="btn" href="mailto:${esc(story.authorContactEmail)}">Email writer</a>` : ''}
+            ${story.authorContactEmail ? `<a class="btn" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=${encodeURIComponent(story.authorContactEmail)}" target="_blank" rel="noopener noreferrer">Email writer</a>` : ''}
             ${contactSourceLink(story.authorContactSource)}
             ${instagramLink(story.authorInstagram)}
             ${story.authorDonationQr && !(story.isOwn || (session && session.user.id === story.authorId)) ? `<button class="btn openWriterDonation" data-qr="${esc(story.authorDonationQr)}" data-writer="${esc(story.author)}"><span aria-hidden="true">&#9825;</span> Support writer</button>` : ''}
