@@ -83,34 +83,6 @@ drop policy if exists "stories_owner_delete" on public.stories;
 create policy "stories_owner_delete" on public.stories for delete to authenticated
   using (author_id = (select auth.uid()) and public.is_writer());
 
-drop policy if exists "likes_owner_insert" on public.likes;
-create policy "likes_owner_insert" on public.likes for insert to authenticated
-  with check (user_id = (select auth.uid()) and public.is_writer());
-drop policy if exists "likes_owner_delete" on public.likes;
-create policy "likes_owner_delete" on public.likes for delete to authenticated
-  using (user_id = (select auth.uid()) and public.is_writer());
-drop policy if exists "bookmarks_owner_all" on public.bookmarks;
-create policy "bookmarks_owner_all" on public.bookmarks to authenticated
-  using (user_id = (select auth.uid()) and public.is_writer())
-  with check (user_id = (select auth.uid()) and public.is_writer());
-drop policy if exists "comments_owner_insert" on public.comments;
-create policy "comments_owner_insert" on public.comments for insert to authenticated
-  with check (user_id = (select auth.uid()) and public.is_writer());
-drop policy if exists "comments_owner_update" on public.comments;
-create policy "comments_owner_update" on public.comments for update to authenticated
-  using (user_id = (select auth.uid()) and public.is_writer())
-  with check (user_id = (select auth.uid()) and public.is_writer());
-drop policy if exists "comments_owner_delete" on public.comments;
-create policy "comments_owner_delete" on public.comments for delete to authenticated
-  using (user_id = (select auth.uid()) and public.is_writer());
-drop policy if exists "follows_owner_write" on public.follows;
-create policy "follows_owner_write" on public.follows to authenticated
-  using (follower_id = (select auth.uid()) and public.is_writer())
-  with check (follower_id = (select auth.uid()) and public.is_writer());
-drop policy if exists "reports_owner_insert" on public.reports;
-create policy "reports_owner_insert" on public.reports for insert to authenticated
-  with check (reporter_id = (select auth.uid()) and public.is_writer());
-
 drop policy if exists "writers_upload_own_donation_qr" on storage.objects;
 create policy "writers_upload_own_donation_qr" on storage.objects for insert to authenticated
 with check (

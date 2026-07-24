@@ -23,7 +23,7 @@ Storyteller is a responsive writing and reading platform built as a static singl
 - Cinematic rotating homepage artwork with reduced-motion support
 - Email/password and social authentication
 - Public Reader and Writer account roles, with administrator accounts created privately by the developer
-- Reader accounts for a focused, read-only experience
+- Reader accounts with reading history, likes, bookmarks, comments, follows, and reports
 - Writer onboarding with required Gmail and contact source, plus an optional donation QR that can be added later
 - Rich editor with live preview, autosave, TXT import, tags, categories, and cover uploads
 - Draft and publication workflows with publication-integrity safeguards
@@ -101,7 +101,7 @@ Open `http://localhost:8000`. A `file://` URL is not recommended because browser
 supabase functions deploy record-story-view --no-verify-jwt
 ```
 
-Apply `supabase/migrations/202607240001_reader_writer_roles.sql` after the earlier migrations. New public accounts can choose only Reader or Writer. Social sign-in creates a Reader account by default. Administrator roles are never offered through public signup and continue to be assigned privately by the developer.
+Apply both `202607240001_reader_writer_roles.sql` and `202607240002_restore_reader_interactions.sql` after the earlier migrations. New public accounts can choose only Reader or Writer. Social sign-in creates a Reader account by default. Administrator roles are never offered through public signup and continue to be assigned privately by the developer.
 
 `SUPABASE_SERVICE_ROLE_KEY`, `VIEW_COUNT_SALT`, database passwords, and access tokens must never be placed in browser code or committed to Git. Hosted Supabase functions receive server credentials through protected environment variables.
 

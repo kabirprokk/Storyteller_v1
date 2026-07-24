@@ -165,7 +165,7 @@ const card = story => {
       <div class="cover">
         <img src="${img(story)}" loading="lazy" alt="Cover for ${esc(story.title)}">
         <span class="pill">${esc(story.cat)}</span>
-        ${hasWriterAccess() ? `<button class="save icon-btn ${bookmarkedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Bookmark ${esc(story.title)}" aria-pressed="${bookmarkedStoryIds.has(story.id)}">${icons.bookmark}</button>` : ''}
+        <button class="save icon-btn ${bookmarkedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Bookmark ${esc(story.title)}" aria-pressed="${bookmarkedStoryIds.has(story.id)}">${icons.bookmark}</button>
       </div>
       <h3><a href="${destination}">${esc(story.title)}</a></h3>
       <p>${esc(story.desc)}</p>
@@ -199,7 +199,7 @@ const footer = () => `
         </div>
         <div>
           <h5>CREATE</h5>
-          ${hasWriterAccess() ? '<a href="#write">Write</a>' : ''}
+          <a href="#write">Write</a>
           <a href="#profile">Profile</a>
         </div>
         <div>
@@ -253,8 +253,8 @@ function home() {
             <h1>Every Story<br>Deserves to Be <em>Told.</em></h1>
             <p>A home for honest voices, untold worlds, and the beautiful mess of being human.</p>
             <div class="buttons">
-              <a class="btn primary" href="${heroStory || !hasWriterAccess() ? '#explore' : '#write'}">${heroStory || !hasWriterAccess() ? 'Start reading' : 'Write the first story'} →</a>
-              ${hasWriterAccess() ? '<a class="btn" href="#write">Write your story</a>' : ''}
+              <a class="btn primary" href="${heroStory ? '#explore' : '#write'}">${heroStory ? 'Start reading' : 'Write the first story'} →</a>
+              <a class="btn" href="#write">Write your story</a>
             </div>
           </div>
         </div>
@@ -389,18 +389,18 @@ function reader(story) {
           <div class="author-actions">
             ${story.isOwn || (session && session.user.id === story.authorId)
               ? '<span class="btn disabled">Your story</span>'
-              : hasWriterAccess() ? `<button class="btn followAuthor" data-username="${esc(story.username)}">Follow</button>` : ''}
+              : `<button class="btn followAuthor" data-username="${esc(story.username)}">Follow</button>`}
             ${story.authorContactEmail ? `<a class="btn" href="mailto:${esc(story.authorContactEmail)}">Email writer</a>` : ''}
             ${contactSourceLink(story.authorContactSource)}
             ${story.authorDonationQr && !(story.isOwn || (session && session.user.id === story.authorId)) ? `<button class="btn openWriterDonation" data-qr="${esc(story.authorDonationQr)}" data-writer="${esc(story.author)}"><span aria-hidden="true">&#9825;</span> Support writer</button>` : ''}
-            ${isPublished && hasWriterAccess() ? '<button class="btn reportStory">Report</button>' : !isPublished ? '<span class="btn disabled">Private draft</span>' : ''}
+            ${isPublished ? '<button class="btn reportStory">Report</button>' : '<span class="btn disabled">Private draft</span>'}
           </div>
         </div>
       </div>
 
       <div class="reader-tools">
-        ${hasWriterAccess() ? `<button class="like icon-btn ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Like" aria-pressed="${likedStoryIds.has(story.id)}">${icons.heart}</button>` : ''}
-        ${hasWriterAccess() ? `<button class="bookmark icon-btn ${bookmarkedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Bookmark" aria-pressed="${bookmarkedStoryIds.has(story.id)}">${icons.bookmark}</button>` : ''}
+        <button class="like icon-btn ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Like" aria-pressed="${likedStoryIds.has(story.id)}">${icons.heart}</button>
+        <button class="bookmark icon-btn ${bookmarkedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-label="Bookmark" aria-pressed="${bookmarkedStoryIds.has(story.id)}">${icons.bookmark}</button>
         ${story.authorDonationQr && !(story.isOwn || (session && session.user.id === story.authorId)) ? `<button class="writer-donate-tool openWriterDonation icon-btn" data-qr="${esc(story.authorDonationQr)}" data-writer="${esc(story.author)}" aria-label="Donate to ${esc(story.author)}" title="Support this writer">${icons.donate}</button>` : ''}
         <button id="font" class="icon-btn" aria-label="Adjust font size"><span>Aa</span></button>
         <button id="readerMode" class="icon-btn" aria-label="Toggle reading mode">${icons.theme}</button>
@@ -411,7 +411,7 @@ function reader(story) {
         <div class="reader-end">
           <span class="eyebrow">The end</span>
           <h2>Did this story move you?</h2>
-          ${hasWriterAccess() ? `<button class="btn primary like ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-pressed="${likedStoryIds.has(story.id)}"><span class="btn-icon">${icons.heart}</span><span>Appreciate · ${story.likes}</span></button>` : '<p class="meta">Keep reading. More stories are waiting for you.</p>'}
+          <button class="btn primary like ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-pressed="${likedStoryIds.has(story.id)}"><span class="btn-icon">${icons.heart}</span><span>Appreciate · ${story.likes}</span></button>
           <div class="story-nav">
             ${prev ? `<a class="btn" href="#story/${prev.slug}">Previous story</a>` : '<span class="btn disabled">Previous story</span>'}
             ${next ? `<a class="btn" href="#story/${next.slug}">Next story</a>` : '<span class="btn disabled">Next story</span>'}
@@ -438,11 +438,11 @@ function reader(story) {
             <h2>Comments</h2>
           </div>
         </div>
-        ${isPublished && hasWriterAccess() ? `
+        ${isPublished ? `
           <div id="commentList"></div>
           <textarea id="commentBody" maxlength="2000" placeholder="Leave a thoughtful response..."></textarea>
           <button class="btn primary" id="comment">Post comment</button>
-        ` : isPublished ? '<div id="commentList"></div>' : empty('Comments locked', 'Publish this draft to start a conversation.')}
+        ` : empty('Comments locked', 'Publish this draft to start a conversation.')}
       </div>
     </article>
   `;
@@ -555,10 +555,11 @@ async function profile(tab = 'published') {
   await syncNavbarAvatar(me);
 
   const writer = hasWriterAccess();
-  const activeTab = writer ? tab : 'history';
+  const readerTabs = new Set(['liked', 'bookmarks', 'history']);
+  const activeTab = writer ? tab : (readerTabs.has(tab) ? tab : 'bookmarks');
   const mine = writer
     ? (activeTab === 'published' ? await StoryAPI.myStories('published') : await StoryAPI.library(activeTab))
-    : await StoryAPI.library('history');
+    : await StoryAPI.library(activeTab);
   const items = mine.map(story => {
     if (activeTab === 'drafts') {
       return `
@@ -623,7 +624,7 @@ async function profile(tab = 'published') {
       <section>
         <div class="container">
           <div class="chips profile-tabs">
-            ${(writer ? [['published', 'Published'], ['drafts', 'Drafts'], ['liked', 'Liked'], ['bookmarks', 'Bookmarks'], ['history', 'History']] : [['history', 'Reading history']])
+            ${(writer ? [['published', 'Published'], ['drafts', 'Drafts'], ['liked', 'Liked'], ['bookmarks', 'Bookmarks'], ['history', 'History']] : [['liked', 'Liked'], ['bookmarks', 'Bookmarks'], ['history', 'Reading history']])
               .map(item => `<a class="chip ${activeTab === item[0] ? 'active' : ''}" href="#profile/${item[0]}">${item[1]}</a>`).join('')}
           </div>
           <div class="grid profile-grid">${items || empty('Nothing here yet', activeTab === 'drafts' ? 'Your saved drafts appear here.' : 'Your reading history will grow as you explore.')}</div>
