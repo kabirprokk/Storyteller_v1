@@ -449,15 +449,19 @@ function reader(story) {
 }
 
 function write(story = null) {
-  if (!session) return auth('signin', 'Sign in to write and publish.');
+  if (!session) return auth('signup-writer', 'Add the required details to create a Writer account and start publishing.');
   if (!hasWriterAccess()) return `
     <div class="page auth-wrap">
       <div class="auth-card">
         <a class="brand" href="#home">${brand}</a>
         <span class="eyebrow">Writer access</span>
         <h1>Become a writer.</h1>
-        <p>Upgrade your reader account to publish and manage your own stories.</p>
-        <a class="btn primary" href="#profile">Upgrade from profile</a>
+        <p>Your Reader account already has a display name, login email, and password or social login. Add the required writer details below to unlock publishing.</p>
+        <div class="field"><label>Display name</label><input value="${esc(session.user.user_metadata?.display_name || session.user.email?.split('@')[0] || '')}" readonly></div>
+        <div class="field"><label>Login email</label><input value="${esc(session.user.email || '')}" readonly></div>
+        <div class="field"><label>Writer Gmail address ending in @gmail.com</label><input id="becomeWriterEmail" type="email" placeholder="yourname@gmail.com"></div>
+        <div class="field"><label>Contact source, such as a website, portfolio, or social profile</label><input id="becomeWriterSource" maxlength="300" placeholder="Website, portfolio, or social profile URL"></div>
+        <button id="becomeWriter" class="btn primary" type="button">Upgrade to Writer</button>
       </div>
     </div>
   `;
@@ -521,13 +525,14 @@ function write(story = null) {
 }
 
 function auth(mode = 'signin', msg = '') {
-  const signup = mode === 'signup';
+  const signup = mode.startsWith('signup');
+  const writerSignup = mode === 'signup-writer';
   return `
     <div class="page auth-wrap">
       <form class="auth-card">
         <a class="brand" href="#home">${brand}</a>
         <span class="eyebrow">${signup ? 'Join us' : 'Welcome back'}</span>
-        <h1>${signup ? 'Tell your story.' : 'Continue your story.'}</h1>
+        <h1>${signup ? (writerSignup ? 'Create your Writer account.' : 'Tell your story.') : 'Continue your story.'}</h1>
         <p>${esc(msg || 'Read, write, save, and join the conversation.')}</p>
         <button type="button" class="social" data-provider="google">Continue with Google</button>
         <button type="button" class="social" data-provider="github">Continue with GitHub</button>
@@ -537,12 +542,12 @@ function auth(mode = 'signin', msg = '') {
         ${signup ? `
           <fieldset class="role-picker">
             <legend>Choose your role</legend>
-            <label><input type="radio" name="accountRole" value="reader" checked><span><b>Reader</b><small>Read and discover stories.</small></span></label>
-            <label><input type="radio" name="accountRole" value="writer"><span><b>Writer</b><small>Write, publish, and manage your own stories.</small></span></label>
+            <label><input type="radio" name="accountRole" value="reader" ${writerSignup ? '' : 'checked'}><span><b>Reader</b><small>Read and discover stories.</small></span></label>
+            <label><input type="radio" name="accountRole" value="writer" ${writerSignup ? 'checked' : ''}><span><b>Writer</b><small>Write, publish, and manage your own stories.</small></span></label>
           </fieldset>
-          <div id="writerSignupFields" hidden>
-            <div class="field"><label>Writer Gmail</label><input id="writerGmail" type="email" autocomplete="email" placeholder="yourname@gmail.com"></div>
-            <div class="field"><label>Contact source</label><input id="writerContactSource" maxlength="300" placeholder="Website, portfolio, or social profile URL"></div>
+          <div id="writerSignupFields" ${writerSignup ? '' : 'hidden'}>
+            <div class="field"><label>Writer Gmail address ending in @gmail.com</label><input id="writerGmail" type="email" autocomplete="email" placeholder="yourname@gmail.com" ${writerSignup ? 'required' : ''}></div>
+            <div class="field"><label>Contact source, such as a website, portfolio, or social profile</label><input id="writerContactSource" maxlength="300" placeholder="Website, portfolio, or social profile URL" ${writerSignup ? 'required' : ''}></div>
             <small>Your payment QR is optional and can be added later from your Writer profile.</small>
           </div>
         ` : ''}
