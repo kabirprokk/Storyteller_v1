@@ -25,7 +25,7 @@ Storyteller is a responsive writing and reading platform built as a static singl
 - Public Reader and Writer account roles, with administrator accounts created privately by the developer
 - Reader accounts with reading history, likes, bookmarks, comments, follows, and reports
 - Writer onboarding with required Gmail, optional contact source, optional Instagram handle, and an optional donation QR that can be added later
-- Rich editor with live preview, autosave, TXT import, tags, categories, and cover uploads
+- Rich editor with live preview, autosave, TXT import, page add/remove/duplicate/reorder controls, tags, categories, and cover uploads
 - Draft and publication workflows with publication-integrity safeguards
 - Recently published, featured, trending, search, sorting, and category discovery
 - Reader mode, likes, bookmarks, comments, sharing, reports, and reading history

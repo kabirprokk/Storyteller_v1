@@ -17,6 +17,9 @@ let adminMode = false;
 let accountRole = 'guest';
 let likedStoryIds = new Set();
 let bookmarkedStoryIds = new Set();
+let editorPages = ['<p>Tell your story...</p>'];
+let activeEditorPage = 0;
+const PAGE_BREAK = '<hr data-story-page-break="true">';
 const logo = 'assets/storyteller-mark.png';
 const supportEmail = 'kabirsayed.k@gmail.com';
 const gmailComposeUrl = (subject = '', body = '') => {
@@ -106,6 +109,39 @@ const textImportMeta = (text, fileName) => {
 };
 
 const editorWordCount = (title, subtitle, content) => words([title, subtitle, stripHtml(content)].filter(Boolean).join(' '));
+const splitStoryPages = html => {
+  const source = String(html || '<p>Tell your story...</p>');
+  const pages = source
+    .split(/<hr\b[^>]*data-story-page-break(?:="true")?[^>]*>/i)
+    .map(page => page.trim())
+    .filter(Boolean);
+  return pages.length ? pages : ['<p>Tell your story...</p>'];
+};
+const syncActiveEditorPage = () => {
+  const editor = $('#storyContent');
+  if (editor) editorPages[activeEditorPage] = editor.innerHTML || '<p></p>';
+};
+const combinedEditorContent = () => {
+  syncActiveEditorPage();
+  return editorPages.map(page => page.trim() || '<p></p>').join(PAGE_BREAK);
+};
+const renderPageManager = () => {
+  const tabs = $('#pageTabs');
+  if (!tabs) return;
+  tabs.innerHTML = editorPages.map((_, index) => `<button class="chip ${index === activeEditorPage ? 'active' : ''}" type="button" data-page-index="${index}">Page ${index + 1}</button>`).join('');
+  const counter = $('#pageCounter');
+  if (counter) counter.textContent = `${editorPages.length} page${editorPages.length === 1 ? '' : 's'} · editing page ${activeEditorPage + 1}`;
+};
+const setEditorPage = (index, syncCurrent = true) => {
+  const editor = $('#storyContent');
+  if (!editor) return;
+  if (syncCurrent) syncActiveEditorPage();
+  activeEditorPage = Math.max(0, Math.min(index, editorPages.length - 1));
+  editor.innerHTML = editorPages[activeEditorPage] || '<p></p>';
+  renderPageManager();
+  editorStats();
+  editor.focus();
+};
 
 const sanitizeStoryHtml = html => DOMPurify.sanitize(html || '<p></p>', {
   USE_PROFILES: { html: true },
@@ -118,7 +154,7 @@ function editorPreview() {
 
   const title = $('#storyTitle')?.value.trim() || 'Untitled Story';
   const subtitle = $('#storySubtitle')?.value.trim();
-  const content = sanitizeStoryHtml($('#storyContent')?.innerHTML || '<p></p>');
+  const content = sanitizeStoryHtml(combinedEditorContent());
   const tags = ($('#storyTags')?.value || '')
     .split(',')
     .map(tag => tag.trim())
@@ -130,7 +166,7 @@ function editorPreview() {
       <span class="eyebrow">Live preview</span>
       <h2>${esc(title)}</h2>
       ${subtitle ? `<p class="preview-subtitle">${esc(subtitle)}</p>` : ''}
-      <div class="preview-copy">${content}</div>
+      <div class="preview-copy">${content.replace(/<hr\b[^>]*data-story-page-break(?:="true")?[^>]*>/gi, '<div class="preview-page-break"><span>Next page</span></div>')}</div>
       ${tags.length ? `<div class="chips preview-tags">${tags.map(tag => `<span class="chip">${esc(tag)}</span>`).join('')}</div>` : ''}
     </div>
   `;
@@ -142,7 +178,7 @@ function editorStats() {
 
   const title = $('#storyTitle')?.value.trim() || '';
   const subtitle = $('#storySubtitle')?.value.trim() || '';
-  const body = $('#storyContent')?.innerText || '';
+  const body = stripHtml(combinedEditorContent());
   const count = editorWordCount(title, subtitle, body);
   meta.textContent = `${count.toLocaleString()} words · ${Math.max(1, Math.ceil(count / 220))} min read`;
   editorPreview();
@@ -155,7 +191,12 @@ async function importTxtStory(file) {
 
   if ($('#storyTitle') && !$('#storyTitle').value.trim()) $('#storyTitle').value = data.title;
   if ($('#storySubtitle') && !$('#storySubtitle').value.trim() && data.subtitle) $('#storySubtitle').value = data.subtitle;
-  if ($('#storyContent')) $('#storyContent').innerHTML = data.content;
+  if ($('#storyContent')) {
+    editorPages = splitStoryPages(data.content);
+    activeEditorPage = 0;
+    $('#storyContent').innerHTML = editorPages[0];
+    renderPageManager();
+  }
 
   $('#saveState') && ($('#saveState').textContent = 'Unsaved');
   editorStats();
@@ -362,7 +403,7 @@ function explore() {
 function reader(story) {
   if (!story) return `<div class="page auth-wrap">${empty('Story not found', 'It may have been removed.')}</div>`;
 
-  const content = sanitizeStoryHtml(story.content || '');
+  const content = sanitizeStoryHtml(story.content || '').replace(/<hr\b[^>]*data-story-page-break(?:="true")?[^>]*>/gi, '<div class="reader-page-break"><span>Next page</span></div>');
   const isPublished = story.status === 'published';
   const index = stories.findIndex(item => item.slug === story.slug);
   const prev = index > 0 ? stories[index - 1] : null;
@@ -475,9 +516,11 @@ function write(story = null) {
   editingStory = story;
   draftId = story?.id || null;
 
-  const initialCount = editorWordCount(story?.title || '', story?.desc || '', story?.content || '');
+  editorPages = splitStoryPages(story?.content ? sanitizeStoryHtml(story.content) : '<p>Tell your story...</p>');
+  activeEditorPage = 0;
+  const initialContent = editorPages[0];
+  const initialCount = editorWordCount(story?.title || '', story?.desc || '', editorPages.join(' '));
   const initialMinutes = Math.max(1, Math.ceil(initialCount / 220));
-  const initialContent = story?.content ? sanitizeStoryHtml(story.content) : '<p>Tell your story...</p>';
 
   return `
     <div class="page editor">
@@ -496,7 +539,23 @@ function write(story = null) {
           <button class="btn primary publish" type="button">Publish</button>
         </div>
       </div>
-      <p class="editor-note">Upload a plain text story file, refine the layout below, and publish when it is ready.</p>
+      <p class="editor-note">Upload a plain text story file, split longer work into pages, refine the layout below, and publish when it is ready.</p>
+      <div class="page-manager" aria-label="Story pages">
+        <div>
+          <span class="eyebrow">Pages</span>
+          <small id="pageCounter">${editorPages.length} page${editorPages.length === 1 ? '' : 's'} · editing page 1</small>
+        </div>
+        <div class="page-actions">
+          <button class="btn" id="addPage" type="button">Add page</button>
+          <button class="btn" id="duplicatePage" type="button">Duplicate</button>
+          <button class="btn" id="movePageLeft" type="button">Move left</button>
+          <button class="btn" id="movePageRight" type="button">Move right</button>
+          <button class="btn danger" id="removePage" type="button">Remove</button>
+        </div>
+        <div class="chips page-tabs" id="pageTabs">
+          ${editorPages.map((_, index) => `<button class="chip ${index === activeEditorPage ? 'active' : ''}" type="button" data-page-index="${index}">Page ${index + 1}</button>`).join('')}
+        </div>
+      </div>
       <input class="title-input" id="storyTitle" maxlength="160" value="${esc(story?.title || '')}" placeholder="Your story begins with a title...">
       <input class="subtitle-input" id="storySubtitle" maxlength="300" value="${esc(story?.desc || '')}" placeholder="Add a compelling subtitle">
       <div class="editor-bar">
@@ -1033,7 +1092,7 @@ async function persistStory(publish) {
   if (!$('#storyTitle') || !$('#storyContent')) return;
   const title = $('#storyTitle').value.trim();
   if (title.length < 3) throw Error('Add a title with at least 3 characters');
-  const content = $('#storyContent').innerHTML;
+  const content = combinedEditorContent();
   const plainContent = stripHtml(content).replace(/\s+/g, ' ').trim();
   if (publish && (!plainContent || plainContent === 'Tell your story...')) throw Error('Add story content before publishing');
 
@@ -1201,6 +1260,54 @@ $('#comment')?.addEventListener('click', async () => {
 
   $$('.editor-bar [data-cmd]').forEach(button => {
     button.onclick = () => document.execCommand(button.dataset.cmd, false, button.dataset.cmd === 'formatBlock' ? 'blockquote' : null);
+  });
+
+  const markEditorChanged = () => {
+    if ($('#saveState')) $('#saveState').textContent = 'Unsaved';
+    editorStats();
+    clearTimeout(timer);
+    timer = setTimeout(() => saveStory(false).catch(error => {
+      if ($('#saveState')) $('#saveState').textContent = error.message;
+    }), 1500);
+  };
+
+  $('#pageTabs')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-page-index]');
+    if (button) setEditorPage(Number(button.dataset.pageIndex));
+  });
+  $('#addPage')?.addEventListener('click', () => {
+    syncActiveEditorPage();
+    editorPages.splice(activeEditorPage + 1, 0, '<p>New page...</p>');
+    setEditorPage(activeEditorPage + 1, false);
+    markEditorChanged();
+  });
+  $('#duplicatePage')?.addEventListener('click', () => {
+    syncActiveEditorPage();
+    editorPages.splice(activeEditorPage + 1, 0, editorPages[activeEditorPage] || '<p></p>');
+    setEditorPage(activeEditorPage + 1, false);
+    markEditorChanged();
+  });
+  $('#removePage')?.addEventListener('click', () => {
+    if (editorPages.length === 1) return toast('At least one page is required');
+    if (!confirm('Remove this page?')) return;
+    syncActiveEditorPage();
+    editorPages.splice(activeEditorPage, 1);
+    setEditorPage(Math.min(activeEditorPage, editorPages.length - 1), false);
+    markEditorChanged();
+  });
+  $('#movePageLeft')?.addEventListener('click', () => {
+    if (activeEditorPage === 0) return;
+    syncActiveEditorPage();
+    [editorPages[activeEditorPage - 1], editorPages[activeEditorPage]] = [editorPages[activeEditorPage], editorPages[activeEditorPage - 1]];
+    setEditorPage(activeEditorPage - 1, false);
+    markEditorChanged();
+  });
+  $('#movePageRight')?.addEventListener('click', () => {
+    if (activeEditorPage >= editorPages.length - 1) return;
+    syncActiveEditorPage();
+    [editorPages[activeEditorPage + 1], editorPages[activeEditorPage]] = [editorPages[activeEditorPage], editorPages[activeEditorPage + 1]];
+    setEditorPage(activeEditorPage + 1, false);
+    markEditorChanged();
   });
 
   $$('#storyTitle,#storySubtitle,#storyTags,#storyContent').forEach(node => {
