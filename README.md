@@ -101,7 +101,7 @@ Open `http://localhost:8000`. A `file://` URL is not recommended because browser
 supabase functions deploy record-story-view --no-verify-jwt
 ```
 
-Apply both `202607240001_reader_writer_roles.sql` and `202607240002_restore_reader_interactions.sql` after the earlier migrations. New public accounts can choose only Reader or Writer. Social sign-in creates a Reader account by default. Administrator roles are never offered through public signup and continue to be assigned privately by the developer.
+Apply `202607240001_reader_writer_roles.sql`, `202607240002_restore_reader_interactions.sql`, and `202607240003_reader_become_writer.sql` after the earlier migrations. New public accounts can choose only Reader or Writer, and Reader accounts can later upgrade themselves to Writer from their profile after adding the required Gmail and contact source. Social sign-in creates a Reader account by default. Administrator roles are never offered through public signup and continue to be assigned privately by the developer.
 
 `SUPABASE_SERVICE_ROLE_KEY`, `VIEW_COUNT_SALT`, database passwords, and access tokens must never be placed in browser code or committed to Git. Hosted Supabase functions receive server credentials through protected environment variables.
 

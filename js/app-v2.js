@@ -450,7 +450,17 @@ function reader(story) {
 
 function write(story = null) {
   if (!session) return auth('signin', 'Sign in to write and publish.');
-  if (!hasWriterAccess()) return `<div class="page auth-wrap">${empty('Writer access required', 'Reader accounts can enjoy stories. Create a Writer account to publish your own work.')}</div>`;
+  if (!hasWriterAccess()) return `
+    <div class="page auth-wrap">
+      <div class="auth-card">
+        <a class="brand" href="#home">${brand}</a>
+        <span class="eyebrow">Writer access</span>
+        <h1>Become a writer.</h1>
+        <p>Upgrade your reader account to publish and manage your own stories.</p>
+        <a class="btn primary" href="#profile">Upgrade from profile</a>
+      </div>
+    </div>
+  `;
 
   editingStory = story;
   draftId = story?.id || null;
@@ -593,6 +603,7 @@ async function profile(tab = 'published') {
             <p class="meta">@${esc(me.username)} · ${esc(me.role)}</p>
             <div class="buttons">
               <button class="btn editProfile">Edit profile</button>
+              ${!writer ? '<button class="btn primary becomeWriterHero" type="button">Become a writer</button>' : ''}
               ${adminMode ? '<a class="btn" href="#admin">Admin console</a>' : ''}
               <button class="btn signOut">Sign out</button>
             </div>
@@ -608,6 +619,17 @@ async function profile(tab = 'published') {
         ${writer ? `<div class="field"><label>Writer Gmail</label><input id="profileContactEmail" type="email" value="${esc(me.contact_email || '')}" placeholder="yourname@gmail.com"></div>
         <div class="field"><label>Contact source</label><input id="profileContactSource" maxlength="300" value="${esc(me.contact_source || '')}" placeholder="Website, portfolio, or social profile URL"></div>` : ''}
         <button class="btn primary saveProfile">Save profile</button>
+        ${!writer ? `<div class="writer-donation-settings become-writer-panel">
+          <div>
+            <span class="eyebrow">Start publishing</span>
+            <h3>Become a writer</h3>
+            <p>Reader accounts can be upgraded instantly. Add a Gmail address and a contact source so readers and moderators can identify your public writer profile.</p>
+            <div class="field"><label>Writer Gmail</label><input id="becomeWriterEmail" type="email" placeholder="yourname@gmail.com"></div>
+            <div class="field"><label>Contact source</label><input id="becomeWriterSource" maxlength="300" placeholder="Website, portfolio, or social profile URL"></div>
+            <button id="becomeWriter" class="btn primary" type="button">Upgrade to Writer</button>
+          </div>
+          <div class="writer-qr-preview"><strong>Writer tools</strong><small>Drafts, publishing, and optional donation QR unlock after upgrade.</small></div>
+        </div>` : ''}
         ${writer ? `<div class="writer-donation-settings">
           <div>
             <span class="eyebrow">Reader support</span>
@@ -1262,7 +1284,13 @@ $('#comment')?.addEventListener('click', async () => {
   });
 
   $('.editProfile')?.addEventListener('click', () => { $('.profile-editor').hidden = !$('.profile-editor').hidden; });
+  $('.becomeWriterHero')?.addEventListener('click', () => {
+    const editor = $('.profile-editor');
+    if (editor) editor.hidden = false;
+    $('#becomeWriterEmail')?.focus();
+  });
   $('.saveProfile')?.addEventListener('click', saveProfile);
+  $('#becomeWriter')?.addEventListener('click', becomeWriter);
   $('#saveWriterDonationQr')?.addEventListener('click', async event => {
     const file = $('#writerDonationQrFile')?.files?.[0];
     if (!file) return toast('Choose a QR image');
@@ -1340,6 +1368,34 @@ async function handlePasswordReset(event) {
     location.hash = 'profile';
   } catch (error) {
     authFail(error);
+  }
+}
+
+async function becomeWriter(event) {
+  const button = event?.currentTarget;
+  const email = $('#becomeWriterEmail')?.value.trim().toLowerCase() || '';
+  const source = $('#becomeWriterSource')?.value.trim() || '';
+  if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@gmail\.com$/i.test(email)) return toast('Enter a valid Gmail address');
+  if (source.length < 3) return toast('Add a contact source');
+
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Upgrading...';
+    }
+    const updatedProfile = await StoryAPI.becomeWriter(email, source);
+    accountRole = updatedProfile?.role || 'writer';
+    await syncNavbarAvatar(updatedProfile);
+    toast('Writer tools unlocked');
+    location.hash = 'profile/drafts';
+    route();
+  } catch (error) {
+    authFail(error);
+  } finally {
+    if (button?.isConnected) {
+      button.disabled = false;
+      button.textContent = 'Upgrade to Writer';
+    }
   }
 }
 
