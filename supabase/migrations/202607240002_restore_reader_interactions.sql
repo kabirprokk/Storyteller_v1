@@ -1,6 +1,21 @@
 -- Readers retain normal reading and community tools.
 -- Only authoring stories and writer donation uploads are Writer-only.
 
+create or replace function public.is_active_user()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists(
+    select 1 from public.profiles
+    where id = (select auth.uid()) and not is_suspended
+  )
+$$;
+revoke all on function public.is_active_user() from public, anon;
+grant execute on function public.is_active_user() to authenticated;
+
 drop policy if exists "likes_owner_insert" on public.likes;
 create policy "likes_owner_insert" on public.likes for insert to authenticated
 with check (
