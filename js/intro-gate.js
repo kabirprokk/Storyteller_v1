@@ -51,6 +51,7 @@
       if (startShown) return;
       startShown = true;
       video.pause();
+      video.style.pointerEvents = 'none';
       end.hidden = false;
       startButton.focus({ preventScroll: true });
     };
