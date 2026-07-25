@@ -299,7 +299,7 @@ function home() {
             <h1>Every Story<br>Deserves to Be <em>Told.</em></h1>
             <p>A home for honest voices, untold worlds, and the beautiful mess of being human.</p>
             <div class="buttons">
-              <a class="btn primary" href="${heroStory ? '#explore' : '#write'}">${heroStory ? 'Start reading' : 'Write the first story'} →</a>
+              <a class="btn primary" data-get-started href="${heroStory ? '#explore' : '#auth/signup'}">${heroStory ? 'Start reading' : 'Get started'} →</a>
               <a class="btn" href="#write">Write your story</a>
             </div>
           </div>
