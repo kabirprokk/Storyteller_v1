@@ -58,6 +58,7 @@
     skip.addEventListener('click', finish);
     startButton.addEventListener('click', finish);
     video.addEventListener('ended', showStart, { once: true });
+    video.addEventListener('error', showStart, { once: true });
     video.addEventListener('timeupdate', () => {
       if (video.ended || (video.duration && video.currentTime >= video.duration - 0.3)) showStart();
     });
