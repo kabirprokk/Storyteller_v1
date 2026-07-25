@@ -58,12 +58,7 @@
     skip.addEventListener('click', finish);
     startButton.addEventListener('click', finish);
     video.addEventListener('ended', showStart, { once: true });
-    video.addEventListener('error', showStart, { once: true });
-    video.addEventListener('timeupdate', () => {
-      if (video.ended || (video.duration && video.currentTime >= video.duration - 0.3)) showStart();
-    });
-    video.play().catch(showStart);
-    if (video.readyState >= 4 && video.ended) showStart();
+    video.play().catch(() => {});
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
