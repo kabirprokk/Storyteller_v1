@@ -125,6 +125,32 @@ const combinedEditorContent = () => {
   syncActiveEditorPage();
   return editorPages.map(page => page.trim() || '<p></p>').join(PAGE_BREAK);
 };
+const EDITOR_BACKUP_PREFIX = 'storyteller.editorBackup.v1';
+const editorBackupKey = id => `${EDITOR_BACKUP_PREFIX}.${session?.user?.id || 'guest'}.${id || draftId || 'new'}`;
+const readEditorBackup = id => {
+  try {
+    const backup = JSON.parse(localStorage.getItem(editorBackupKey(id)) || 'null');
+    return backup && Array.isArray(backup.pages) ? backup : null;
+  } catch { return null; }
+};
+const saveEditorBackup = () => {
+  if (!$('#storyTitle') || !$('#storyContent')) return;
+  syncActiveEditorPage();
+  try {
+    localStorage.setItem(editorBackupKey(), JSON.stringify({
+      title: $('#storyTitle')?.value || '',
+      subtitle: $('#storySubtitle')?.value || '',
+      category: $('#storyCategory')?.value || '',
+      tags: $('#storyTags')?.value || '',
+      pages: editorPages,
+      activePage: activeEditorPage,
+      savedAt: Date.now(),
+    }));
+  } catch {}
+};
+const clearEditorBackup = id => {
+  try { localStorage.removeItem(editorBackupKey(id)); } catch {}
+};
 const renderPageManager = () => {
   const tabs = $('#pageTabs');
   if (!tabs) return;
@@ -200,6 +226,7 @@ async function importTxtStory(file) {
   }
 
   $('#saveState') && ($('#saveState').textContent = 'Unsaved');
+  saveEditorBackup();
   editorStats();
   toast(`Imported ${file.name}`);
 }
@@ -516,11 +543,16 @@ function write(story = null) {
 
   editingStory = story;
   draftId = story?.id || null;
+  const backup = readEditorBackup(story?.id || null);
+  const initialTitle = backup?.title ?? story?.title ?? '';
+  const initialSubtitle = backup?.subtitle ?? story?.desc ?? '';
+  const initialCategory = backup?.category ?? story?.categoryId ?? '';
+  const initialTags = backup?.tags ?? (story?.tags || []).join(', ');
 
-  editorPages = splitStoryPages(story?.content ? sanitizeStoryHtml(story.content) : '<p>Tell your story...</p>');
-  activeEditorPage = 0;
-  const initialContent = editorPages[0];
-  const initialCount = editorWordCount(story?.title || '', story?.desc || '', editorPages.join(' '));
+  editorPages = backup?.pages?.length ? backup.pages : splitStoryPages(story?.content ? sanitizeStoryHtml(story.content) : '<p>Tell your story...</p>');
+  activeEditorPage = Math.max(0, Math.min(Number(backup?.activePage || 0), editorPages.length - 1));
+  const initialContent = editorPages[activeEditorPage] || editorPages[0];
+  const initialCount = editorWordCount(initialTitle, initialSubtitle, editorPages.join(' '));
   const initialMinutes = Math.max(1, Math.ceil(initialCount / 220));
 
   return `
@@ -528,7 +560,7 @@ function write(story = null) {
       <div class="editor-top">
         <div>
           <span class="eyebrow">${story ? 'Edit story' : 'New story'}</span>
-          <small id="saveState">${story ? 'Saved draft' : 'Draft not saved'}</small>
+          <small id="saveState">${backup ? 'Recovered unsaved local changes' : (story ? 'Saved draft' : 'Draft not saved')}</small>
           <small id="editorStats">${initialCount.toLocaleString()} words · ${initialMinutes} min read</small>
         </div>
         <div class="buttons editor-tools">
@@ -544,7 +576,7 @@ function write(story = null) {
       <div class="page-manager" aria-label="Story pages">
         <div>
           <span class="eyebrow">Pages</span>
-          <small id="pageCounter">${editorPages.length} page${editorPages.length === 1 ? '' : 's'} · editing page 1</small>
+          <small id="pageCounter">${editorPages.length} page${editorPages.length === 1 ? '' : 's'} · editing page ${activeEditorPage + 1}</small>
         </div>
         <div class="page-actions">
           <button class="btn" id="addPage" type="button">Add page</button>
@@ -557,8 +589,8 @@ function write(story = null) {
           ${editorPages.map((_, index) => `<button class="chip ${index === activeEditorPage ? 'active' : ''}" type="button" data-page-index="${index}">Page ${index + 1}</button>`).join('')}
         </div>
       </div>
-      <input class="title-input" id="storyTitle" maxlength="160" value="${esc(story?.title || '')}" placeholder="Your story begins with a title..." aria-label="Story title">
-      <input class="subtitle-input" id="storySubtitle" maxlength="300" value="${esc(story?.desc || '')}" placeholder="Add a compelling subtitle" aria-label="Story subtitle">
+      <input class="title-input" id="storyTitle" maxlength="160" value="${esc(initialTitle)}" placeholder="Your story begins with a title..." aria-label="Story title">
+      <input class="subtitle-input" id="storySubtitle" maxlength="300" value="${esc(initialSubtitle)}" placeholder="Add a compelling subtitle" aria-label="Story subtitle">
       <div class="editor-bar" aria-label="Formatting toolbar">
         <button data-cmd="undo" title="Undo" aria-label="Undo"><span class="material-symbols-outlined" aria-hidden="true">undo</span></button>
         <button data-cmd="redo" title="Redo" aria-label="Redo"><span class="material-symbols-outlined" aria-hidden="true">redo</span></button>
@@ -588,12 +620,12 @@ function write(story = null) {
           <label>Category</label>
           <select id="storyCategory">
             <option value="">Select category</option>
-            ${categories.map(category => `<option value="${category.id}" ${String(story?.categoryId) === String(category.id) ? 'selected' : ''}>${esc(category.name)}</option>`).join('')}
+            ${categories.map(category => `<option value="${category.id}" ${String(initialCategory) === String(category.id) ? 'selected' : ''}>${esc(category.name)}</option>`).join('')}
           </select>
         </div>
         <div class="field">
           <label>Tags</label>
-          <input id="storyTags" value="${esc((story?.tags || []).join(', '))}" placeholder="memory, travel, life">
+          <input id="storyTags" value="${esc(initialTags)}" placeholder="memory, travel, life">
         </div>
         <div class="field">
           <label>Cover image</label>
@@ -1132,9 +1164,13 @@ async function persistStory(publish) {
     publishedAt: editingStory?.publishedAt || editingStory?.published_at || null,
   };
 
+  const previousDraftId = draftId;
   const record = await StoryAPI.saveStory(payload, publish);
   draftId = record.id;
   editingStory = { ...(editingStory || {}), ...record, cover };
+  clearEditorBackup(previousDraftId);
+  clearEditorBackup('new');
+  if (!publish && !previousDraftId && location.hash === '#write') history.replaceState(null, '', `#write/${record.id}`);
 
   if ($('#saveState')) $('#saveState').textContent = publish ? 'Published' : 'Draft saved';
   toast(publish ? 'Story published' : 'Draft saved');
@@ -1338,6 +1374,7 @@ $('#comment')?.addEventListener('click', async () => {
   });
 
   const markEditorChanged = () => {
+    saveEditorBackup();
     if ($('#saveState')) $('#saveState').textContent = 'Unsaved';
     editorStats();
     clearTimeout(timer);
@@ -1385,9 +1422,10 @@ $('#comment')?.addEventListener('click', async () => {
     markEditorChanged();
   });
 
-  $$('#storyTitle,#storySubtitle,#storyTags,#storyContent').forEach(node => {
+  $$('#storyTitle,#storySubtitle,#storyCategory,#storyTags,#storyContent').forEach(node => {
     node?.addEventListener('input', () => {
       clearTimeout(timer);
+      saveEditorBackup();
       if ($('#saveState')) $('#saveState').textContent = 'Unsaved';
       editorStats();
       if ($('#storyContent')) {
@@ -2003,6 +2041,12 @@ addEventListener('hashchange', () => {
   $('#notifications').classList.remove('open');
   route();
 });
+addEventListener('visibilitychange', () => {
+  if (document.hidden) saveEditorBackup();
+});
+addEventListener('pagehide', saveEditorBackup);
+addEventListener('beforeunload', saveEditorBackup);
+
 addEventListener('scroll', () => {
   const header = $('#header');
   header.classList.toggle('scrolled', scrollY > 30);
