@@ -487,7 +487,7 @@ function reader(story) {
         </div>
         ${isPublished ? `
           <div id="commentList"></div>
-          <textarea id="commentBody" maxlength="2000" placeholder="Leave a thoughtful response..."></textarea>
+          <textarea id="commentBody" maxlength="2000" placeholder="Leave a thoughtful response..." aria-label="Comment text"></textarea>
           <button class="btn primary" id="comment">Post comment</button>
         ` : empty('Comments locked', 'Publish this draft to start a conversation.')}
       </div>
@@ -557,8 +557,8 @@ function write(story = null) {
           ${editorPages.map((_, index) => `<button class="chip ${index === activeEditorPage ? 'active' : ''}" type="button" data-page-index="${index}">Page ${index + 1}</button>`).join('')}
         </div>
       </div>
-      <input class="title-input" id="storyTitle" maxlength="160" value="${esc(story?.title || '')}" placeholder="Your story begins with a title...">
-      <input class="subtitle-input" id="storySubtitle" maxlength="300" value="${esc(story?.desc || '')}" placeholder="Add a compelling subtitle">
+      <input class="title-input" id="storyTitle" maxlength="160" value="${esc(story?.title || '')}" placeholder="Your story begins with a title..." aria-label="Story title">
+      <input class="subtitle-input" id="storySubtitle" maxlength="300" value="${esc(story?.desc || '')}" placeholder="Add a compelling subtitle" aria-label="Story subtitle">
       <div class="editor-bar" aria-label="Formatting toolbar">
         <button data-cmd="undo" title="Undo" aria-label="Undo"><span class="material-symbols-outlined" aria-hidden="true">undo</span></button>
         <button data-cmd="redo" title="Redo" aria-label="Redo"><span class="material-symbols-outlined" aria-hidden="true">redo</span></button>
@@ -1180,8 +1180,20 @@ async function loadComments() {
     : empty('No comments yet', 'Start the conversation.');
 }
 
+function enhanceFormLabels() {
+  $$('.field').forEach((field, index) => {
+    const label = field.querySelector('label');
+    const control = field.querySelector('input, select, textarea');
+    if (!label || !control) return;
+    if (!control.id) control.id = `storyteller-field-${index}`;
+    label.htmlFor = control.id;
+    if (!control.getAttribute('aria-label')) control.setAttribute('aria-label', label.textContent.trim());
+  });
+}
+
 function bind() {
   startHeroRotation();
+  enhanceFormLabels();
   requestAnimationFrame(() => $$('.reveal').forEach(card => card.classList.add('seen')));
 
   $$('[data-story-url]').forEach(storyCard => {
