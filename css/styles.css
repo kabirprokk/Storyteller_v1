@@ -463,3 +463,11 @@ body.intro-locked{overflow:hidden}
 .intro-end[hidden]{display:none!important}
 .intro-start{min-width:170px;box-shadow:0 18px 60px #0008}
 @media(max-width:650px){.intro-end{bottom:32px}.intro-start{min-width:150px}}
+
+/* Inline form feedback and in-app notifications */
+.field-error{display:block;min-height:18px;margin-top:8px;color:#ff8b72;font-size:12px;font-weight:600;letter-spacing:0;text-transform:none}
+.field.invalid input,.field.invalid select,.field.invalid textarea{border-color:#ff6b4a!important;box-shadow:0 0 0 3px rgba(255,107,74,.13)}
+#toast{top:92px;right:calc((100vw - min(1180px,94vw))/2);bottom:auto;left:auto;max-width:min(420px,92vw);transform:translateY(-12px);background:rgba(17,16,14,.94);color:#f4efe5;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:14px;padding:14px 18px;box-shadow:0 20px 70px rgba(0,0,0,.45);backdrop-filter:blur(18px)}
+#toast.show{transform:translateY(0)}
+body.light #toast{background:rgba(255,253,249,.96);color:#201913;border-color:#34281b24;border-left-color:#c7522c;box-shadow:0 18px 55px rgba(73,50,27,.18)}
+@media(max-width:650px){#toast{top:78px;right:12px;left:12px;max-width:none}}

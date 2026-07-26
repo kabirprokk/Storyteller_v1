@@ -699,7 +699,7 @@ async function profile(tab = 'published') {
 
       <div class="profile-editor container" hidden>
         <div class="field"><label>Display name</label><input id="profileName" maxlength="80" value="${esc(me.display_name)}"></div>
-        <div class="field"><label>Username</label><input id="profileUsername" maxlength="30" value="${esc(me.username)}"></div>
+        <div class="field"><label>Username</label><input id="profileUsername" maxlength="30" value="${esc(me.username)}" aria-describedby="profileUsernameFeedback"><small class="field-error" id="profileUsernameFeedback" aria-live="polite"></small></div>
         <div class="field"><label>Bio</label><textarea id="profileBio" maxlength="500">${esc(me.bio)}</textarea></div>
         <div class="field"><label>Avatar</label><input id="profileAvatar" type="file" accept="image/jpeg,image/png,image/webp"></div>
         ${writer ? `<div class="field"><label>Writer Gmail</label><input id="profileContactEmail" type="email" value="${esc(me.contact_email || '')}" placeholder="yourname@gmail.com"></div>
@@ -1485,6 +1485,7 @@ $('#comment')?.addEventListener('click', async () => {
     $('#becomeWriterEmail')?.focus();
   });
   $('.saveProfile')?.addEventListener('click', saveProfile);
+  $('#profileUsername')?.addEventListener('input', clearProfileUsernameError);
   $('#becomeWriter')?.addEventListener('click', becomeWriter);
   $('#saveWriterDonationQr')?.addEventListener('click', async event => {
     const file = $('#writerDonationQrFile')?.files?.[0];
@@ -1625,6 +1626,11 @@ async function saveProfile() {
     toast('Profile updated');
     route();
   } catch (error) {
+    if (isUsernameTakenError(error)) {
+      showProfileUsernameError(friendlyErrorMessage(error));
+      $('#profileUsername')?.focus();
+      return;
+    }
     authFail(error);
   }
 }
@@ -1801,13 +1807,23 @@ const usernameTakenMessages = [
   'Too slow, that username already exists.',
   'Pick another username — this one has an owner.',
 ];
+const isUsernameTakenError = error => /profiles_username_key|duplicate key value.*username|username.*already/i.test(String(error?.message || error || ''));
 const friendlyErrorMessage = error => {
   const text = String(error?.message || error || 'Something went wrong');
-  if (/profiles_username_key|duplicate key value.*username|username.*already/i.test(text)) {
-    return usernameTakenMessages[Math.floor(Math.random() * usernameTakenMessages.length)];
-  }
+  if (isUsernameTakenError(error)) return usernameTakenMessages[Math.floor(Math.random() * usernameTakenMessages.length)];
   if (/provider is not enabled/i.test(text)) return 'That social login is not enabled yet. Use email and password for now.';
   return text;
+};
+const showProfileUsernameError = message => {
+  const field = $('#profileUsername')?.closest('.field');
+  const feedback = $('#profileUsernameFeedback');
+  if (!field || !feedback) return toast(message);
+  field.classList.add('invalid');
+  feedback.textContent = message;
+};
+const clearProfileUsernameError = () => {
+  $('#profileUsername')?.closest('.field')?.classList.remove('invalid');
+  if ($('#profileUsernameFeedback')) $('#profileUsernameFeedback').textContent = '';
 };
 
 function authFail(error) {
