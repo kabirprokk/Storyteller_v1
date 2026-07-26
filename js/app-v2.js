@@ -2072,12 +2072,21 @@ addEventListener('scroll', () => {
     syncRoleNavigation();
     await syncNavbarAvatar();
     StoryAPI.onAuthChange(async (nextSession, event) => {
+      const previousUserId = session?.user?.id || null;
+      const nextUserId = nextSession?.user?.id || null;
       session = nextSession;
       accountRole = nextSession ? ((await StoryAPI.profile())?.role || 'reader') : 'guest';
       adminMode = nextSession ? await StoryAPI.isAdmin() : false;
       syncRoleNavigation();
       await syncNavbarAvatar();
-      if (event === 'PASSWORD_RECOVERY') location.hash = 'reset-password';
+      if (event === 'PASSWORD_RECOVERY') {
+        location.hash = 'reset-password';
+        return;
+      }
+      // Supabase may emit SIGNED_IN/TOKEN_REFRESHED when a tab becomes active again.
+      // Do not re-render the SPA for the same user, because that interrupts writing.
+      if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') return;
+      if (event === 'SIGNED_IN' && previousUserId === nextUserId) return;
       route();
     });
   }
