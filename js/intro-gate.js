@@ -3,12 +3,15 @@
 
   const INTRO_KEY = 'storyteller.introSeen.v1';
   const done = () => {
-    try { sessionStorage.setItem(INTRO_KEY, 'yes'); } catch {}
+    try {
+      localStorage.setItem(INTRO_KEY, 'yes');
+      sessionStorage.setItem(INTRO_KEY, 'yes');
+    } catch {}
     window.STORYTELLER_INTRO_PENDING = false;
     window.dispatchEvent(new CustomEvent('storyteller:intro-complete'));
   };
   const seen = () => {
-    try { return sessionStorage.getItem(INTRO_KEY) === 'yes'; } catch { return false; }
+    try { return localStorage.getItem(INTRO_KEY) === 'yes' || sessionStorage.getItem(INTRO_KEY) === 'yes'; } catch { return false; }
   };
 
   if (seen()) {

@@ -262,7 +262,7 @@
 
   const sessionVerified = () => {
     try {
-      return sessionStorage.getItem(SESSION_KEY) === 'yes';
+      return localStorage.getItem(SESSION_KEY) === 'yes' || sessionStorage.getItem(SESSION_KEY) === 'yes';
     } catch {
       return false;
     }
@@ -270,9 +270,10 @@
 
   const saveSessionVerification = () => {
     try {
+      localStorage.setItem(SESSION_KEY, 'yes');
       sessionStorage.setItem(SESSION_KEY, 'yes');
     } catch {
-      // The overlay still unlocks when storage is unavailable, but a refresh challenges again.
+      // The overlay still unlocks when storage is unavailable, but a refresh may challenge again.
     }
   };
 

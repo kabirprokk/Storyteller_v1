@@ -269,6 +269,7 @@ const footer = () => `
           <h5>DISCOVER</h5>
           <a href="#explore">Explore</a>
           <a href="#explore">Trending</a>
+          <a href="#assets">Assets</a>
         </div>
         <div>
           <h5>CREATE</h5>
@@ -793,6 +794,44 @@ function resetPassword() {
   `;
 }
 
+function assetLibrary() {
+  const assets = [
+    { type: 'image', title: 'Storyteller mark', src: 'assets/storyteller-mark.png', note: 'Original brand artwork' },
+    { type: 'image', title: 'Optimized app icon', src: 'assets/storyteller-mark-512.webp', note: 'Lightweight icon used by the app' },
+    { type: 'image', title: 'Hero mountain artwork', src: 'assets/hero-1280.webp', note: 'Homepage cinematic background' },
+    { type: 'image', title: 'Story world artwork', src: 'assets/hero-stories-1280.webp', note: 'Editorial story artwork' },
+    { type: 'image', title: 'Social preview image', src: 'assets/og-image.jpg', note: 'Preview image for link sharing' },
+    { type: 'video', title: 'StoryTeller intro video', src: 'assets/StoryTeller-intro.mp4', note: 'Replay the first-visit intro anytime' },
+    { type: 'audio', title: 'Storyteller theme song', src: 'assets/storyteller-theme-song.mp3', note: 'Local theme music' },
+  ];
+
+  return `
+    <div class="page assets-page">
+      <section class="explore-head container">
+        <span class="eyebrow">Storyteller assets</span>
+        <h1 class="page-title">Images, video<br>and sound.</h1>
+        <p>Replay the intro video or view the public artwork used across Storyteller.</p>
+      </section>
+      <section>
+        <div class="container asset-grid">
+          ${assets.map(item => `
+            <article class="asset-card">
+              <span class="eyebrow">${esc(item.type)}</span>
+              <h3>${esc(item.title)}</h3>
+              <p>${esc(item.note)}</p>
+              ${item.type === 'image' ? `<img src="${esc(item.src)}" alt="${esc(item.title)}" loading="lazy">` : ''}
+              ${item.type === 'video' ? `<video src="${esc(item.src)}" controls preload="metadata" playsinline></video>` : ''}
+              ${item.type === 'audio' ? `<audio src="${esc(item.src)}" controls preload="metadata"></audio>` : ''}
+              <a class="btn" href="${esc(item.src)}" target="_blank" rel="noopener noreferrer">Open asset</a>
+            </article>
+          `).join('')}
+        </div>
+      </section>
+      ${footer()}
+    </div>
+  `;
+}
+
 function legal(kind) {
   const pages = {
     privacy: {
@@ -1112,6 +1151,8 @@ async function route() {
       $('#app').innerHTML = legal(page);
     } else if (page === 'helping-panel') {
       $('#app').innerHTML = helpCenter();
+    } else if (page === 'assets') {
+      $('#app').innerHTML = assetLibrary();
     } else {
       await refresh();
       $('#app').innerHTML = home();
