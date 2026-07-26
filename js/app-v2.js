@@ -1793,11 +1793,26 @@ function syncRoleNavigation() {
   $$('[data-writer-only]').forEach(node => { node.hidden = !hasWriterAccess(); });
 }
 
+const usernameTakenMessages = [
+  'Username already taken — choose a different one.',
+  'Nahh, that username is already claimed.',
+  'Make it different — someone got there first.',
+  'That username is busy. Try another vibe.',
+  'Too slow, that username already exists.',
+  'Pick another username — this one has an owner.',
+];
+const friendlyErrorMessage = error => {
+  const text = String(error?.message || error || 'Something went wrong');
+  if (/profiles_username_key|duplicate key value.*username|username.*already/i.test(text)) {
+    return usernameTakenMessages[Math.floor(Math.random() * usernameTakenMessages.length)];
+  }
+  if (/provider is not enabled/i.test(text)) return 'That social login is not enabled yet. Use email and password for now.';
+  return text;
+};
+
 function authFail(error) {
   console.error(error);
-  const message = /provider is not enabled/i.test(error.message || '')
-    ? 'That social login is not enabled yet. Use email and password for now.'
-    : error.message;
+  const message = friendlyErrorMessage(error);
   toast(message);
   if (/sign in/i.test(error.message || '')) setTimeout(() => { location.hash = 'auth/signin'; }, 500);
 }
