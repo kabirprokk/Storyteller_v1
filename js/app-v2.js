@@ -430,7 +430,7 @@ function reader(story) {
           ${avatarMarkup(story.authorAvatar, story.ini, 'peach')}
           <div>
             <b>${esc(story.author)}</b>
-            <div class="meta">${esc(story.date)} · ${esc(story.time)} · ${story.views} views</div>
+            <div class="meta">${esc(story.date)} · ${esc(story.time)} · <span class="story-view-count">${Number(story.views || 0).toLocaleString()}</span> views</div>
           </div>
           <div class="author-actions">
             ${story.isOwn || (session && session.user.id === story.authorId)
@@ -1060,7 +1060,6 @@ async function route() {
         $('#app').innerHTML = auth('signin', 'Sign in or create an account to read stories.');
       } else {
         currentStory = await StoryAPI.story(decodeURIComponent(arg || ''));
-        if (currentStory.status === 'published') await StoryAPI.view(currentStory.id).catch(() => {});
         $('#app').innerHTML = reader(currentStory);
       }
     } else if (page === 'explore') {
@@ -1090,6 +1089,7 @@ async function route() {
     bind();
 
     if (page === 'story' && currentStory?.status === 'published') {
+      setTimeout(() => recordCurrentStoryView().catch(error => console.error('Could not record view', error)), 3500);
       loadComments().catch(error => console.error('Could not load comments', error));
       StoryAPI.markRead(currentStory.id, 10);
     }
@@ -1144,6 +1144,23 @@ async function persistStory(publish) {
     location.hash = `story/${record.slug}`;
   } else {
     editorStats();
+  }
+}
+
+async function recordCurrentStoryView() {
+  if (!currentStory?.id || currentStory.status !== 'published') return;
+  const hourKey = new Date().toISOString().slice(0, 13);
+  const storageKey = `storyteller.view.${currentStory.id}.${hourKey}`;
+  try {
+    if (localStorage.getItem(storageKey)) return;
+    localStorage.setItem(storageKey, 'pending');
+  } catch {}
+
+  const counted = await StoryAPI.view(currentStory.id);
+  try { localStorage.setItem(storageKey, counted ? 'counted' : 'seen'); } catch {}
+  if (counted) {
+    currentStory.views = Number(currentStory.views || 0) + 1;
+    $$('.story-view-count').forEach(node => { node.textContent = currentStory.views.toLocaleString(); });
   }
 }
 

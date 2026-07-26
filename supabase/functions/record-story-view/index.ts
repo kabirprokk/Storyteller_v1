@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.110.7'
 
-const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') || 'https://kabirprokk.github.io')
+const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') || 'https://storyteller-v1.netlify.app')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)
@@ -42,9 +42,13 @@ Deno.serve(async (request) => {
       || request.headers.get('x-real-ip')
       || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
       || 'unknown'
+    const userAgent = request.headers.get('user-agent')?.slice(0, 180) || 'unknown-agent'
+    const language = request.headers.get('accept-language')?.split(',')[0]?.slice(0, 32) || 'unknown-language'
     const salt = Deno.env.get('VIEW_COUNT_SALT')
     if (!salt) throw new Error('VIEW_COUNT_SALT is not configured')
-    const fingerprint = await sha256(`${forwarded}|${salt}`)
+    // Include coarse browser signals so different people on the same Wi-Fi/mobile network
+    // are not collapsed into one hourly view, while still storing only a salted hash.
+    const fingerprint = await sha256(`${forwarded}|${userAgent}|${language}|${salt}`)
 
     const url = Deno.env.get('SUPABASE_URL')!
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
