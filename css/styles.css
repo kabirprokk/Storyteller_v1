@@ -487,3 +487,9 @@ body.light .site-message{background:rgba(255,253,249,.96);color:#201913;border-c
 .asset-card h3{font:400 30px/1.05 var(--serif);margin:10px 0 8px}
 .asset-card p{color:var(--muted);font-size:13px}.asset-card img,.asset-card video{width:100%;max-height:420px;object-fit:contain;border-radius:14px;background:#050505;margin:14px 0}.asset-card audio{width:100%;margin:18px 0}.asset-card .btn{margin-top:6px}
 @media(max-width:760px){.asset-grid{grid-template-columns:1fr}.asset-card{padding:18px}.asset-card h3{font-size:26px}}
+
+/* Read-aloud controls */
+.listen-panel{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:18px 0 0;padding:14px;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--card) 84%,transparent)}
+.listen-panel>div{margin-right:auto}.listen-panel strong{display:block;font-size:13px}.listen-panel label{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.14em}.listen-panel select{height:42px;min-width:120px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text);padding:0 12px}.listen-panel .btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+body.light .listen-panel{background:#fffaf3;border-color:#34281b20}body.light .listen-panel select{background:#fffdf9;color:#201913;border-color:#34281b24}
+@media(max-width:650px){.listen-panel{align-items:stretch}.listen-panel>div{flex-basis:100%}.listen-panel select,.listen-panel .btn{flex:1}}

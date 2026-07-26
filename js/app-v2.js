@@ -73,6 +73,11 @@ const instagramLink = value => {
   return handle ? `<a class="btn" href="https://www.instagram.com/${encodeURIComponent(handle)}/" target="_blank" rel="noopener noreferrer">Instagram @${esc(handle)}</a>` : '';
 };
 const stripHtml = value => String(value ?? '').replace(/<[^>]*>/g, ' ');
+const storySpeechText = story => [story?.title, story?.desc, stripHtml(story?.content || '')]
+  .filter(Boolean)
+  .join('. ')
+  .replace(/\s+/g, ' ')
+  .trim();
 const words = value => String(value ?? '').trim().split(/\s+/).filter(Boolean).length;
 const img = story => esc(story?.cover || 'assets/hero-1280.webp');
 const avatarMarkup = (url, initials, tone = '') => `<i class="avatar ${tone}">${url
@@ -470,6 +475,18 @@ function reader(story) {
             ${story.authorDonationQr && !(story.isOwn || (session && session.user.id === story.authorId)) ? `<button class="btn openWriterDonation" data-qr="${esc(story.authorDonationQr)}" data-writer="${esc(story.author)}"><span aria-hidden="true">&#9825;</span> Support writer</button>` : ''}
             ${isPublished ? '<button class="btn reportStory">Report</button>' : '<span class="btn disabled">Private draft</span>'}
           </div>
+        </div>
+        <div class="listen-panel" aria-label="Listen to this story">
+          <div>
+            <span class="eyebrow">Listen</span>
+            <strong>Read this story aloud</strong>
+          </div>
+          <label for="voiceGender">Voice</label>
+          <select id="voiceGender" aria-label="Choose reading voice">
+            <option value="female">Woman</option>
+            <option value="male">Man</option>
+          </select>
+          <button class="btn primary" id="readStory" type="button">Play story</button>
         </div>
       </div>
 
@@ -1257,6 +1274,68 @@ async function loadComments() {
     : empty('No comments yet', 'Start the conversation.');
 }
 
+let speechQueue = [];
+let speechActive = false;
+const speechSupported = () => 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+const voiceLooksFemale = voice => /female|woman|zira|samantha|victoria|karen|susan|aria|jenny|natasha|sonia|google uk english female/i.test(`${voice.name} ${voice.voiceURI}`);
+const voiceLooksMale = voice => /male|man|david|mark|daniel|alex|fred|george|ravi|google uk english male/i.test(`${voice.name} ${voice.voiceURI}`);
+const chooseSpeechVoice = gender => {
+  const voices = speechSynthesis.getVoices().filter(voice => /^en(-|_)?/i.test(voice.lang || '') || !voice.lang);
+  const preferred = voices.find(gender === 'male' ? voiceLooksMale : voiceLooksFemale);
+  return preferred || voices.find(voice => /natural|neural|premium|online/i.test(`${voice.name} ${voice.voiceURI}`)) || voices[0] || null;
+};
+const splitSpeechText = text => {
+  const sentences = String(text || '').match(/[^.!?]+[.!?]*/g) || [];
+  const chunks = [];
+  let current = '';
+  sentences.forEach(sentence => {
+    if ((current + sentence).length > 230) {
+      if (current.trim()) chunks.push(current.trim());
+      current = sentence;
+    } else current += sentence;
+  });
+  if (current.trim()) chunks.push(current.trim());
+  return chunks;
+};
+function stopStorySpeech() {
+  if (!speechSupported()) return;
+  speechActive = false;
+  speechQueue = [];
+  speechSynthesis.cancel();
+  const button = $('#readStory');
+  if (button) {
+    button.textContent = 'Play story';
+    button.classList.remove('active');
+    button.setAttribute('aria-pressed', 'false');
+  }
+}
+function speakNextChunk(voice, rate) {
+  if (!speechActive || !speechQueue.length) return stopStorySpeech();
+  const utterance = new SpeechSynthesisUtterance(speechQueue.shift());
+  if (voice) utterance.voice = voice;
+  utterance.rate = rate;
+  utterance.pitch = $('#voiceGender')?.value === 'male' ? .92 : 1.04;
+  utterance.onend = () => speakNextChunk(voice, rate);
+  utterance.onerror = stopStorySpeech;
+  speechSynthesis.speak(utterance);
+}
+function toggleStorySpeech() {
+  if (!speechSupported()) return toast('Read aloud is not supported in this browser.');
+  if (speechActive || speechSynthesis.speaking) return stopStorySpeech();
+  const text = storySpeechText(currentStory);
+  if (!text) return toast('Nothing to read yet.');
+  const gender = $('#voiceGender')?.value || 'female';
+  speechQueue = splitSpeechText(text);
+  speechActive = true;
+  const button = $('#readStory');
+  if (button) {
+    button.textContent = 'Stop reading';
+    button.classList.add('active');
+    button.setAttribute('aria-pressed', 'true');
+  }
+  speakNextChunk(chooseSpeechVoice(gender), .94);
+}
+
 function enhanceFormLabels() {
   $$('.field').forEach((field, index) => {
     const label = field.querySelector('label');
@@ -1521,6 +1600,8 @@ $('#comment')?.addEventListener('click', async () => {
     }
   });
 
+
+  $('#readStory')?.addEventListener('click', toggleStorySpeech);
 
   $('#font')?.addEventListener('click', event => {
     const enlarged = $('.reader-body')?.classList.toggle('reader-large') ?? false;
@@ -2076,6 +2157,7 @@ document.addEventListener('keydown', event => {
 });
 
 addEventListener('hashchange', () => {
+  stopStorySpeech();
   overlay.classList.remove('open');
   closeDonationModal();
   closeHelpModal();
