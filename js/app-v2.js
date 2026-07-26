@@ -108,6 +108,40 @@ const textImportMeta = (text, fileName) => {
   };
 };
 
+const curatedSource = () => Array.isArray(window.STORYTELLER_CURATED_STORIES) ? window.STORYTELLER_CURATED_STORIES : [];
+const isCuratedStoryId = id => String(id || '').startsWith('curated-');
+const curatedStories = () => curatedSource().map(story => {
+  const category = categories.find(item => item.slug === story.categorySlug || item.name === story.cat);
+  return {
+    authorContactEmail: '',
+    authorContactSource: '',
+    authorDonationQr: '',
+    authorInstagram: '',
+    authorId: 'storyteller-editorial',
+    categoryId: category?.id || story.categorySlug,
+    isOwn: false,
+    ...story,
+    localOnly: true,
+  };
+});
+const mergeCuratedStories = rows => {
+  const seen = new Set((rows || []).map(story => story.slug));
+  return [...curatedStories().filter(story => !seen.has(story.slug)), ...(rows || [])];
+};
+const filterAndSortStories = rows => {
+  let output = [...(rows || [])];
+  if (browseState.category) output = output.filter(story => String(story.categoryId) === String(browseState.category));
+  if (browseState.query) {
+    const query = browseState.query.toLowerCase();
+    output = output.filter(story => [story.title, story.desc, story.author, story.cat, ...(story.tags || [])].join(' ').toLowerCase().includes(query));
+  }
+  if (browseState.sort === 'views') output.sort((a, b) => (b.views || 0) - (a.views || 0));
+  else if (browseState.sort === 'liked') output.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+  else output.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+  return output;
+};
+const localStoryBySlug = slug => curatedStories().find(story => story.slug === slug) || null;
+
 const editorWordCount = (title, subtitle, content) => words([title, subtitle, stripHtml(content)].filter(Boolean).join(' '));
 const splitStoryPages = html => {
   const source = String(html || '<p>Tell your story...</p>');
@@ -1059,13 +1093,13 @@ async function route() {
         try { sessionStorage.setItem('storyteller.redirectAfterAuth', location.hash || '#home'); } catch {}
         $('#app').innerHTML = auth('signin', 'Sign in or create an account to read stories.');
       } else {
-        currentStory = await StoryAPI.story(decodeURIComponent(arg || ''));
-        if (currentStory.status === 'published') await StoryAPI.view(currentStory.id).catch(() => {});
+        currentStory = localStoryBySlug(decodeURIComponent(arg || '')) || await StoryAPI.story(decodeURIComponent(arg || ''));
+        if (currentStory.status === 'published' && !currentStory.localOnly) await StoryAPI.view(currentStory.id).catch(() => {});
         $('#app').innerHTML = reader(currentStory);
       }
     } else if (page === 'explore') {
       browseState = { category: arg || '', query: '', sort: 'latest' };
-      stories = await StoryAPI.stories({ ...browseState, from: 0, to: 11 });
+      stories = filterAndSortStories(mergeCuratedStories(await StoryAPI.stories({ ...browseState, from: 0, to: 11 })));
       $('#app').innerHTML = explore();
     } else if (page === 'profile') {
       $('#app').innerHTML = await profile(arg || 'published');
@@ -1091,7 +1125,7 @@ async function route() {
 
     if (page === 'story' && currentStory?.status === 'published') {
       loadComments().catch(error => console.error('Could not load comments', error));
-      StoryAPI.markRead(currentStory.id, 10);
+      if (!currentStory.localOnly) StoryAPI.markRead(currentStory.id, 10);
     }
 
     if (page.startsWith('admin-')) {
@@ -1148,6 +1182,10 @@ async function persistStory(publish) {
 }
 
 async function loadComments() {
+  if (currentStory?.localOnly) {
+    $('#commentList').innerHTML = empty('Comments open soon', 'These editorial launch stories are built in, so live comments are disabled for now.');
+    return;
+  }
   const rows = await StoryAPI.comments(currentStory.id);
   $('#commentList').innerHTML = rows.length
     ? rows.map(comment => `
@@ -1196,6 +1234,7 @@ function bind() {
     button.onclick = async event => {
       event.preventDefault();
       try {
+        if (isCuratedStoryId(button.dataset.id)) return toast('Curated launch stories cannot be bookmarked yet');
         const active = await StoryAPI.toggle('bookmarks', button.dataset.id);
         if (active) bookmarkedStoryIds.add(button.dataset.id);
         else bookmarkedStoryIds.delete(button.dataset.id);
@@ -1213,6 +1252,7 @@ function bind() {
   $$('.like').forEach(button => {
     button.onclick = async () => {
       try {
+        if (isCuratedStoryId(button.dataset.id)) return toast('Curated launch stories cannot be liked yet');
         const active = await StoryAPI.toggle('likes', button.dataset.id);
         if (active) likedStoryIds.add(button.dataset.id);
         else likedStoryIds.delete(button.dataset.id);
@@ -1234,6 +1274,7 @@ $('#comment')?.addEventListener('click', async () => {
     try {
       const body = $('#commentBody').value.trim();
       if (body) {
+        if (currentStory?.localOnly) return toast('Comments are disabled for curated launch stories');
         await StoryAPI.comment(currentStory.id, body);
         $('#commentBody').value = '';
         await loadComments();
@@ -1264,6 +1305,7 @@ $('#comment')?.addEventListener('click', async () => {
     const reason = prompt('Why are you reporting this story?');
     if (reason?.trim().length >= 5) {
       try {
+        if (currentStory?.localOnly) return toast('Reports are only available for community-published stories');
         await StoryAPI.reportStory(currentStory.id, reason.trim());
         toast('Report sent to moderators');
       } catch (error) {
@@ -1663,7 +1705,7 @@ async function filter() {
 
   const results = await StoryAPI.stories({ ...browseState, from: 0, to: 11 });
   if (requestId !== filterRequest) return;
-  stories = results;
+  stories = filterAndSortStories(mergeCuratedStories(results));
   $('#storyGrid').innerHTML = stories.length ? stories.map(card).join('') : empty('No matches', 'Try another search.');
   $('#more') && ($('#more').hidden = stories.length < 12);
   bind();
@@ -1689,7 +1731,7 @@ async function refresh() {
     session ? StoryAPI.reactionState().catch(() => ({ likes: [], bookmarks: [] })) : Promise.resolve({ likes: [], bookmarks: [] }),
   ]);
   categories = nextCategories;
-  stories = nextStories;
+  stories = mergeCuratedStories(nextStories).sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
   likedStoryIds = new Set(reactions.likes);
   bookmarkedStoryIds = new Set(reactions.bookmarks);
 }
@@ -1943,7 +1985,7 @@ addEventListener('scroll', () => {
   const total = doc.scrollHeight - doc.clientHeight;
   $('#progress').style.width = `${total > 0 ? scrollY / total * 100 : 0}%`;
 
-  if (currentStory && location.hash.startsWith('#story/')) {
+  if (currentStory && !currentStory.localOnly && location.hash.startsWith('#story/')) {
     clearTimeout(readTimer);
     readTimer = setTimeout(() => {
       StoryAPI.markRead(currentStory.id, Math.min(100, Math.round(total > 0 ? scrollY / total * 100 : 0)));
