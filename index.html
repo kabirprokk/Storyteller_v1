@@ -5,11 +5,65 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b0b0b">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://syemkwyfefzdmogtsvmi.supabase.co; connect-src 'self' https://syemkwyfefzdmogtsvmi.supabase.co wss://syemkwyfefzdmogtsvmi.supabase.co; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; form-action 'self'; script-src 'self' 'sha256-8dHYmcZ31YprrlNSu4AriZUG6QZRyebISd5T6cdCh4c='; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://syemkwyfefzdmogtsvmi.supabase.co; connect-src 'self' https://syemkwyfefzdmogtsvmi.supabase.co wss://syemkwyfefzdmogtsvmi.supabase.co; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests">
 <style id="antiClickjack">body{display:none!important}</style>
 <script src="js/frame-guard.js?v=20260722-5"></script>
-<meta name="description" content="Storyteller &mdash; stories that stay with you.">
+<meta name="description" content="Storyteller is a cinematic publishing platform for reading, writing, and sharing original stories.">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<link rel="canonical" href="https://storyteller-v1.netlify.app/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="STORYTELLER">
+<meta property="og:title" content="STORYTELLER — stories that stay with you">
+<meta property="og:description" content="Read, write, publish, and discover original stories on Storyteller.">
+<meta property="og:url" content="https://storyteller-v1.netlify.app/">
+<meta property="og:image" content="https://storyteller-v1.netlify.app/assets/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Cinematic Storyteller artwork">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="STORYTELLER — stories that stay with you">
+<meta name="twitter:description" content="Read, write, publish, and discover original stories on Storyteller.">
+<meta name="twitter:image" content="https://storyteller-v1.netlify.app/assets/og-image.jpg">
 <title>STORYTELLER</title>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://storyteller-v1.netlify.app/#organization",
+      "name": "Storyteller",
+      "url": "https://storyteller-v1.netlify.app/",
+      "logo": "https://storyteller-v1.netlify.app/assets/storyteller-mark-512.webp",
+      "sameAs": ["https://github.com/kabirprokk/Storyteller_v1"],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "kabirsayed.k@gmail.com",
+        "contactType": "customer support"
+      }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://storyteller-v1.netlify.app/#website",
+      "url": "https://storyteller-v1.netlify.app/",
+      "name": "STORYTELLER",
+      "description": "Storyteller is a cinematic publishing platform for reading, writing, and sharing original stories.",
+      "publisher": {"@id": "https://storyteller-v1.netlify.app/#organization"},
+      "inLanguage": "en"
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "https://storyteller-v1.netlify.app/#app",
+      "name": "STORYTELLER",
+      "url": "https://storyteller-v1.netlify.app/",
+      "applicationCategory": "PublishingApplication",
+      "operatingSystem": "Any",
+      "description": "A responsive reading and writing platform with story publishing, reader libraries, writer profiles, and moderation tools.",
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+    }
+  ]
+}
+</script>
 <link rel="icon" type="image/png" href="assets/storyteller-mark-64.png">
 <link rel="apple-touch-icon" href="assets/storyteller-mark-180.png">
 <link rel="preload" as="image" href="assets/hero-1280.webp" fetchpriority="high">

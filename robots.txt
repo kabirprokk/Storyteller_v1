@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://storyteller-v1.netlify.app/sitemap.xml

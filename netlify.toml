@@ -1,5 +1,5 @@
 [build]
-  command = "mkdir -p dist && cp -R index.html manifest.json assets css js vendor dist/"
+  command = "mkdir -p dist && cp -R index.html manifest.json robots.txt sitemap.xml llms.txt assets css js vendor dist/"
   publish = "dist"
 
 [[headers]]

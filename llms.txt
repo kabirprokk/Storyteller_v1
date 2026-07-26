@@ -1,0 +1,28 @@
+# STORYTELLER
+
+> Storyteller is a cinematic publishing platform for reading, writing, and sharing original stories.
+
+Storyteller is a responsive web application where readers can discover stories and writers can publish original work. The platform includes reader libraries, writer profiles, comments, likes, bookmarks, follows, notifications, moderation tools, community rules, privacy information, and help options.
+
+## Important URLs
+
+- Website: https://storyteller-v1.netlify.app/
+- Explore stories: https://storyteller-v1.netlify.app/#explore
+- Write or sign in: https://storyteller-v1.netlify.app/#write
+- Help Centre: https://storyteller-v1.netlify.app/#helping-panel
+- Privacy Policy: https://storyteller-v1.netlify.app/#privacy
+- Terms and Conditions: https://storyteller-v1.netlify.app/#terms
+- Community Rules: https://storyteller-v1.netlify.app/#rules
+- Source repository: https://github.com/kabirprokk/Storyteller_v1
+
+## What Storyteller is for
+
+- Reading original stories
+- Publishing rich formatted stories
+- Discovering writers and categories
+- Building reader libraries with likes, bookmarks, and history
+- Supporting safe community moderation
+
+## Contact
+
+For support, questions, suggestions, or problem reports, contact kabirsayed.k@gmail.com.
