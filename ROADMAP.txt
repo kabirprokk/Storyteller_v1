@@ -1,0 +1,630 @@
+STORYTELLER WEBSITE ROADMAP
+============================================================
+
+Project: STORYTELLER
+Live site: https://storyteller-v1.netlify.app/
+Repository: https://github.com/kabirprokk/Storyteller_v1
+Frontend hosting: Netlify
+Backend/cloud: Supabase
+Code hosting: GitHub
+Main branch: main
+
+------------------------------------------------------------
+1. WHAT THIS WEBSITE IS
+------------------------------------------------------------
+
+Storyteller is a cinematic reading and writing platform.
+
+It lets users:
+- read published stories
+- create Reader or Writer accounts
+- write and publish stories
+- save drafts
+- like stories
+- bookmark stories
+- comment on stories
+- follow writers
+- report stories
+- manage profiles
+- use admin/moderation tools
+
+The website is built with:
+- HTML
+- CSS
+- vanilla JavaScript
+- Supabase Auth
+- Supabase Postgres database
+- Supabase Storage
+- Supabase Edge Functions
+- Netlify hosting
+
+There is no build framework like React, Vite, Next.js, or WordPress.
+
+------------------------------------------------------------
+2. IMPORTANT PROJECT FILES
+------------------------------------------------------------
+
+index.html
+- Main app shell
+- Loads CSS, JS, vendor files, metadata, CSP, and app scripts
+
+css/styles.css
+- Main visual design
+- Homepage, story cards, reader page, editor, profile, admin, footer, assets page
+
+css/human-verification.css
+- Styling for human verification/captcha gate
+
+js/app-v2.js
+- Main SPA logic
+- Routing
+- Homepage
+- Explore page
+- Story reader
+- Writer editor
+- Profile page
+- Admin pages
+- Search
+- Notifications
+- Toast/site messages
+- Editor backup/recovery
+
+js/supabase-service.js
+- Supabase browser API wrapper
+- Stories
+- Auth
+- Profiles
+- Comments
+- Likes
+- Bookmarks
+- Reports
+- Admin tools
+- View count invoke
+
+js/config.js
+- Public Supabase URL and publishable key
+- Never put service role key here
+
+js/intro-gate.js
+- First-visit intro video
+
+js/human-verification.js
+- Human verification/captcha gate
+
+js/audio-controller.js
+- Theme music and sound toggle
+
+supabase/functions/record-story-view/index.ts
+- Supabase Edge Function for safer view counting
+
+netlify.toml
+- Netlify static deployment config
+
+robots.txt
+- Search crawler access rules
+
+sitemap.xml
+- Search engine sitemap
+
+llms.txt
+- AI/LLM discovery description
+
+------------------------------------------------------------
+3. COMPLETED CHANGES
+------------------------------------------------------------
+
+--- Performance and Lighthouse improvements ---
+
+Commit: 0d16ca1
+Title: Optimize homepage assets for Lighthouse performance
+
+Changes:
+- Added smaller optimized assets:
+  - assets/hero-1280.webp
+  - assets/hero-stories-1280.webp
+  - assets/storyteller-mark-64.png
+  - assets/storyteller-mark-180.png
+  - assets/storyteller-mark-512.webp
+- Replaced heavy PNG hero backgrounds with lightweight WebP versions.
+- Replaced huge logo usage with smaller icons where possible.
+- Changed intro video preload from auto to metadata.
+- Added preload for optimized hero image.
+- Updated manifest icons.
+- Improved expected Lighthouse Performance score.
+
+Reason:
+The site had large files:
+- intro video around 12 MB
+- logo around 2.9 MB
+- hero images around 1.8 MB each
+
+These were slowing down loading.
+
+------------------------------------------------------------
+
+--- AI/search/SEO discovery ---
+
+Commit: 16c153c
+Title: Add AI and search discovery metadata
+
+Changes:
+- Added robots.txt
+- Added sitemap.xml
+- Added llms.txt
+- Added Open Graph metadata
+- Added Twitter card metadata
+- Added canonical URL
+- Added stronger meta description
+- Added JSON-LD structured data for:
+  - Organization
+  - WebSite
+  - WebApplication
+- Added assets/og-image.jpg social preview image
+- Updated netlify.toml to deploy the new root files
+
+Reason:
+To make the website easier for Google, search engines, social previews, and AI/LLM tools to understand.
+
+Important note:
+This does not guarantee Google AI will recommend the site, but it helps crawlers understand it better.
+
+------------------------------------------------------------
+
+--- Curated launch stories added and removed ---
+
+Commit: 405e6fa
+Title: Add curated launch stories
+
+Added 5 built-in stories:
+- The Last Tea Stall Before Rain
+- Instructions for a Lonely Sunday
+- The Map in My Father's Pocket
+- After the Power Cut
+- My Grandmother's Pressure Cooker
+
+Commit: 5903305
+Title: Revert "Add curated launch stories"
+
+Changes:
+- Removed the built-in website stories.
+- Saved story text locally instead.
+
+Local story folder:
+C:\Users\Yasin Designer\Documents\Storys
+
+Local story files:
+- after-the-power-cut.txt
+- instructions-for-a-lonely-sunday.txt
+- my-grandmother-s-pressure-cooker.txt
+- the-last-tea-stall-before-rain.txt
+- the-map-in-my-father-s-pocket.txt
+
+Reason:
+The user wanted stories removed from the website and saved locally instead.
+
+------------------------------------------------------------
+
+--- View count improvement ---
+
+Commit: 3bcc711
+Title: Improve story view counting
+
+Changes:
+- View count now waits about 3.5 seconds before counting.
+- Prevents duplicate count requests in the same browser for the same story/hour.
+- Updates visible story view count immediately if Supabase confirms it counted.
+- Supabase Edge Function fingerprint now uses:
+  - IP
+  - user agent
+  - browser language
+  - secret salt
+
+Reason:
+The previous view count could feel unreliable and could collapse multiple people on the same network into one view.
+
+Important deployment note:
+Netlify deploys frontend automatically, but Supabase Edge Functions do not auto-deploy from Netlify.
+Run this after changing Supabase function code:
+
+supabase functions deploy record-story-view --no-verify-jwt
+
+If custom domain is added later, update Supabase Edge Function secret:
+
+ALLOWED_ORIGINS=https://storyteller-v1.netlify.app,https://yourdomain.com
+
+------------------------------------------------------------
+
+--- README update ---
+
+Commit: bc24584
+Title: Revise README content for clarity and engagement
+
+Changes:
+- Improved README wording and clarity.
+- Made project explanation easier to understand.
+
+------------------------------------------------------------
+
+--- Accessibility label fixes ---
+
+Commit: dff3337
+Title: Improve form field accessibility labels
+
+Changes:
+- Added accessible labels for:
+  - story title
+  - story subtitle
+  - comment textarea
+- Added a helper that connects .field labels to their input/select/textarea controls.
+- Improved DevTools/Lighthouse accessibility issues.
+
+Reason:
+Chrome DevTools showed:
+"No label associated with a form field"
+
+Important note:
+The CSP eval warning was not removed because blocking eval is good for security.
+
+------------------------------------------------------------
+
+--- Friendly duplicate username messages ---
+
+Commit: 4ccd324
+Title: Show friendly duplicate username messages
+
+Changes:
+- Replaced raw Supabase error:
+  duplicate key value violates unique constraint "profiles_username_key"
+
+With random friendly messages like:
+- Username already taken — choose a different one.
+- Nahh, that username is already claimed.
+- Make it different — someone got there first.
+- That username is busy. Try another vibe.
+- Too slow, that username already exists.
+- Pick another username — this one has an owner.
+
+Reason:
+Normal users should not see raw database errors.
+
+------------------------------------------------------------
+
+--- Username errors shown inline ---
+
+Commit: 8fd92ed
+Title: Show username errors inline
+
+Changes:
+- Duplicate username message now appears under the username input.
+- Username input gets error styling.
+- Error clears when the user types again.
+
+Reason:
+The message looked bad when shown as a floating toast at the bottom.
+
+------------------------------------------------------------
+
+--- Floating white toast pill removed ---
+
+Commit: 439b8ea
+Title: Replace floating toast pill with inline messages
+
+Changes:
+- Old white bottom pill was hidden.
+- Website messages now render inside the page as an in-site message block.
+- Username duplicate errors still show directly below username field.
+
+Reason:
+The white floating toast did not match the website style and looked out of place.
+
+------------------------------------------------------------
+
+--- Editor backup across tab reloads ---
+
+Commit: ae341de
+Title: Preserve editor work across tab reloads
+
+Changes:
+- Added local editor backup using localStorage.
+- Preserves:
+  - title
+  - subtitle
+  - category
+  - tags
+  - story pages/content
+  - active page
+- Saves backup on:
+  - typing
+  - tab hidden
+  - pagehide
+  - beforeunload
+  - .txt import
+  - page changes
+- After first draft save, URL changes from #write to #write/{draft-id}.
+
+Reason:
+If browser refreshed or killed the tab, story writing restarted and annoyed the user.
+
+Important note:
+A website cannot fully prevent the browser/phone from killing a tab, but it can recover the writing.
+
+------------------------------------------------------------
+
+--- Stop editor rerender on tab refocus ---
+
+Commit: b8e0532
+Title: Avoid editor rerender on tab refocus
+
+Changes:
+- Supabase auth events like TOKEN_REFRESHED or same-user SIGNED_IN no longer force route reload.
+- Prevents editor from rebuilding when user switches tab and comes back.
+
+Reason:
+The editor appeared to refresh when the tab became active again.
+
+------------------------------------------------------------
+
+--- Intro and captcha persistence plus assets page ---
+
+Commit: 935f19f
+Title: Persist intro and verification and add assets page
+
+Changes:
+- Human verification/captcha now saves in localStorage.
+- Intro video seen state now saves in localStorage.
+- Same browser should not show captcha/intro again after successful completion.
+- Added footer link:
+  Assets
+- Added new page:
+  #assets
+
+Assets page includes:
+- Storyteller mark image
+- optimized app icon
+- hero image
+- story artwork
+- social preview image
+- intro video with controls
+- theme song with controls
+
+Reason:
+The user wanted captcha and intro to show only once, but wanted an option to view intro/media again later.
+
+------------------------------------------------------------
+
+--- Read aloud feature added then removed ---
+
+Commit: 7047abc
+Title: Add read aloud controls for stories
+
+Added:
+- Read aloud panel on story page
+- Woman/Man voice option
+- Play/Stop button
+- Browser Web Speech API support
+
+Commit: df9be39
+Title: Remove story read aloud feature
+
+Removed:
+- Listen panel
+- Woman/Man voice selector
+- Play/Stop story button
+- Speech synthesis code
+- Read-aloud styling
+
+Reason:
+The browser voice quality was not good enough.
+
+------------------------------------------------------------
+4. CURRENT WEBSITE BEHAVIOR
+------------------------------------------------------------
+
+Current important behavior:
+- Homepage uses optimized images.
+- Intro video shows only once per browser.
+- Human verification shows only once per browser after success.
+- Users can revisit intro/media from footer -> Assets.
+- Story editor keeps local backups.
+- Switching tabs should not refresh the editor.
+- Duplicate username errors show under the username input.
+- Old white bottom toast pill has been removed.
+- View counting is improved but Supabase Edge Function must be deployed manually after function changes.
+
+------------------------------------------------------------
+5. DEPLOYMENT NOTES
+------------------------------------------------------------
+
+Netlify settings:
+
+Base directory:
+/
+
+Build command:
+mkdir -p dist && cp -R index.html manifest.json robots.txt sitemap.xml llms.txt assets css js vendor dist/
+
+Publish directory:
+dist
+
+Functions directory:
+Leave blank unless using Netlify Functions.
+
+Backend functions are Supabase Edge Functions, not Netlify Functions.
+
+------------------------------------------------------------
+6. SUPABASE NOTES
+------------------------------------------------------------
+
+Public frontend config:
+js/config.js
+
+This contains:
+- Supabase URL
+- Supabase publishable key
+
+Never put these in browser code:
+- service_role key
+- database password
+- private tokens
+- Supabase secrets
+
+For view counter Edge Function deploy:
+
+supabase functions deploy record-story-view --no-verify-jwt
+
+Required Supabase Edge Function secrets:
+- VIEW_COUNT_SALT
+- ALLOWED_ORIGINS
+
+Current origin:
+https://storyteller-v1.netlify.app
+
+Future custom domain should be added to ALLOWED_ORIGINS.
+
+------------------------------------------------------------
+7. DOMAIN PLAN
+------------------------------------------------------------
+
+Recommended setup:
+- Buy domain only.
+- Keep website hosting on Netlify.
+- Keep backend on Supabase.
+- Keep code on GitHub.
+
+Suggested domain selected during discussion:
+storytellerpage.com
+
+Recommended registrar:
+Namecheap was cheaper than MilesWeb in the checked cart.
+
+Do not buy unnecessary extras:
+- hosting
+- PremiumDNS
+- SSL certificate
+- SEO tools
+- VPN
+- SiteLock
+- business email unless needed
+
+Netlify already provides SSL for connected custom domains.
+
+------------------------------------------------------------
+8. FUTURE ROADMAP
+------------------------------------------------------------
+
+--- Short term ---
+
+1. Connect custom domain
+- Buy domain
+- Point DNS to Netlify
+- Add domain in Netlify
+- Update sitemap/canonical/og URLs after domain is live
+- Update Supabase auth redirect URLs
+- Update ALLOWED_ORIGINS for Edge Function
+
+2. Test view count
+- Deploy Supabase Edge Function
+- Open published story for 4+ seconds
+- Confirm view count updates
+
+3. Test editor recovery
+- Start writing
+- Switch tab
+- Return
+- Refresh manually
+- Confirm content restores
+
+4. Test captcha/intro persistence
+- Complete verification
+- Reload
+- Confirm it does not ask again
+- Check Assets page can replay intro video
+
+--- Medium term ---
+
+5. Improve story editor
+- Add clearer draft saved status
+- Add manual recovery history
+- Add autosave timestamp
+- Add better page reorder UI on mobile
+
+6. Improve public story discovery
+- Add better category pages
+- Add public author pages index
+- Add dynamic sitemap if possible
+- Add featured/trending controls for admin
+
+7. Improve search
+- Add debounce loading state
+- Search tags and authors more clearly
+- Add empty-state suggestions
+
+8. Improve writer profile
+- Better profile preview
+- Better username validation before save
+- Public profile share link
+
+--- Long term ---
+
+9. Better AI voice/audio option
+- Browser Web Speech API was removed because quality was not good.
+- If read-aloud is added again, use a real TTS provider with natural voices.
+- This would require backend/server-side API protection, not direct browser secret keys.
+
+10. Better analytics
+- Add admin view stats by story
+- Add unique views and total views
+- Add daily view chart
+
+11. Better moderation
+- Admin report filters
+- Evidence view
+- Faster comment/story moderation actions
+
+12. Production polish
+- Custom domain
+- Google Search Console
+- Submit sitemap
+- OAuth consent screen branding
+- Privacy/Terms URLs updated to custom domain
+
+------------------------------------------------------------
+9. IMPORTANT WARNINGS
+------------------------------------------------------------
+
+Do not weaken CSP by adding unsafe-eval unless absolutely required.
+
+Do not expose Supabase service_role key in browser code.
+
+Do not move to MilesWeb/cPanel hosting unless there is a clear reason.
+Netlify is better for this static app right now.
+
+Do not add heavy CDN dependencies unless needed.
+The project is intentionally vanilla JS and static.
+
+Supabase Edge Function changes require manual deployment.
+Netlify will not deploy Supabase functions.
+
+------------------------------------------------------------
+10. RECENT COMMIT HISTORY
+------------------------------------------------------------
+
+df9be39 Remove story read aloud feature
+7047abc Add read aloud controls for stories
+935f19f Persist intro and verification and add assets page
+b8e0532 Avoid editor rerender on tab refocus
+ae341de Preserve editor work across tab reloads
+439b8ea Replace floating toast pill with inline messages
+8fd92ed Show username errors inline
+4ccd324 Show friendly duplicate username messages
+dff3337 Improve form field accessibility labels
+bc24584 Revise README content for clarity and engagement
+3bcc711 Improve story view counting
+5903305 Revert "Add curated launch stories"
+405e6fa Add curated launch stories
+16c153c Add AI and search discovery metadata
+0d16ca1 Optimize homepage assets for Lighthouse performance
+
+------------------------------------------------------------
+END OF ROADMAP
+------------------------------------------------------------
