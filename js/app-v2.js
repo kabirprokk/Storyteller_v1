@@ -20,7 +20,7 @@ let bookmarkedStoryIds = new Set();
 let editorPages = ['<p>Tell your story...</p>'];
 let activeEditorPage = 0;
 const PAGE_BREAK = '<hr data-story-page-break="true">';
-const logo = 'assets/storyteller-mark.png';
+const logo = 'assets/storyteller-mark-64.png';
 const supportEmail = 'kabirsayed.k@gmail.com';
 const gmailComposeUrl = (subject = '', body = '') => {
   const parameters = new URLSearchParams({ view: 'cm', fs: '1', to: supportEmail });
@@ -74,7 +74,7 @@ const instagramLink = value => {
 };
 const stripHtml = value => String(value ?? '').replace(/<[^>]*>/g, ' ');
 const words = value => String(value ?? '').trim().split(/\s+/).filter(Boolean).length;
-const img = story => esc(story?.cover || 'assets/hero.png');
+const img = story => esc(story?.cover || 'assets/hero-1280.webp');
 const avatarMarkup = (url, initials, tone = '') => `<i class="avatar ${tone}">${url
   ? `<img src="${esc(url)}" alt="" loading="lazy">`
   : esc(initials || 'ST')}</i>`;

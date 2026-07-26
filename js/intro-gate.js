@@ -25,7 +25,7 @@
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-label', 'Storyteller intro video');
     overlay.innerHTML = `
-      <video class="intro-video" src="assets/StoryTeller-intro.mp4" autoplay muted playsinline preload="auto"></video>
+      <video class="intro-video" src="assets/StoryTeller-intro.mp4" autoplay muted playsinline preload="metadata"></video>
       <button class="intro-skip" type="button">Skip intro</button>
       <div class="intro-end" hidden>
         <button class="btn primary intro-start" type="button">Get Started</button>
