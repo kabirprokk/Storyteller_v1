@@ -1848,12 +1848,20 @@ function debounce(fn, delay) {
 
 let toastTimer = null;
 function toast(message) {
-  const node = $('#toast');
-  if (!node) return;
+  let node = $('#siteMessage');
+  const page = $('.page') || $('#app');
+  if (!node) {
+    node = document.createElement('div');
+    node.id = 'siteMessage';
+    node.className = 'site-message';
+    node.setAttribute('role', 'status');
+    node.setAttribute('aria-live', 'polite');
+    page?.prepend(node);
+  }
   node.textContent = message;
   node.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => node.classList.remove('show'), 3200);
+  toastTimer = setTimeout(() => node.classList.remove('show'), 3600);
 }
 
 const overlay = $('#search');

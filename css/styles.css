@@ -471,3 +471,11 @@ body.intro-locked{overflow:hidden}
 #toast.show{transform:translateY(0)}
 body.light #toast{background:rgba(255,253,249,.96);color:#201913;border-color:#34281b24;border-left-color:#c7522c;box-shadow:0 18px 55px rgba(73,50,27,.18)}
 @media(max-width:650px){#toast{top:78px;right:12px;left:12px;max-width:none}}
+
+/* Remove the old floating toast pill; messages now render inside the current page. */
+#toast{display:none!important}
+.site-message{width:min(720px,92vw);margin:96px auto 0;padding:14px 18px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:14px;background:rgba(17,16,14,.94);color:var(--text);box-shadow:0 18px 55px rgba(0,0,0,.28);opacity:0;transform:translateY(-8px);transition:.25s;pointer-events:none}
+.site-message.show{opacity:1;transform:none}
+.profile-hero .site-message,.hero .site-message{margin-top:0}
+body.light .site-message{background:rgba(255,253,249,.96);color:#201913;border-color:#34281b24;border-left-color:#c7522c;box-shadow:0 18px 45px rgba(73,50,27,.14)}
+@media(max-width:650px){.site-message{margin-top:84px}}
