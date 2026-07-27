@@ -396,12 +396,32 @@
     };
     gateObserver.observe(document.body, { childList: true, subtree: true });
 
-    const blockTransfer = event => event.preventDefault();
+    const shortcutMessages = [
+      'Don\'t be lazy. Type it yourself.',
+      'YOU are a Human? Then type like one.',
+      'Nice try, keyboard wizard. No paste here.',
+      'Copy-paste is taking a nap. You write.',
+      'Human check means human typing.',
+      'No shortcuts in the human zone.',
+      'Your fingers have one job right now.',
+      'Paste button denied. Try actual typing.',
+    ];
+    const playfulBlock = event => {
+      event.preventDefault();
+      const message = shortcutMessages[randomInteger(shortcutMessages.length)];
+      status.textContent = message;
+      status.classList.add('is-error');
+      input.value = '';
+      trustedCharacters = 0;
+      typingTimes = [];
+      updateCharacterProgress();
+      input.focus({ preventScroll: true });
+    };
     ['copy', 'cut', 'paste', 'drop', 'dragstart'].forEach(type => {
-      gate.addEventListener(type, blockTransfer);
+      gate.addEventListener(type, playfulBlock);
     });
-    sentenceDisplay.addEventListener('contextmenu', blockTransfer);
-    input.addEventListener('contextmenu', blockTransfer);
+    sentenceDisplay.addEventListener('contextmenu', playfulBlock);
+    input.addEventListener('contextmenu', playfulBlock);
 
     const chooseSentence = () => {
       let candidate = SENTENCES[randomInteger(SENTENCES.length)];
@@ -495,7 +515,7 @@
 
     input.addEventListener('beforeinput', event => {
       if (['insertFromPaste', 'insertFromDrop', 'insertReplacementText'].includes(event.inputType)) {
-        event.preventDefault();
+        playfulBlock(event);
         return;
       }
       if (event.isTrusted && event.inputType.startsWith('insert') && event.data) {
@@ -539,6 +559,10 @@
     gate.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
         event.preventDefault();
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && ['c', 'x', 'v', 'a', 'insert'].includes(event.key.toLowerCase())) {
+        playfulBlock(event);
         return;
       }
       if (event.key !== 'Tab') return;
