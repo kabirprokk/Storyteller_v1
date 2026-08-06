@@ -98,6 +98,8 @@ Your feedback helps make Storyteller better for everyone.
 Production deploys from `main` through Vercel. Import this repository in Vercel, leave the framework preset as **Other**, keep the root directory as `.`, and leave the build command and output directory empty. Vercel serves `index.html` and the existing `assets/`, `css/`, `js/`, and `vendor/` directories directly. The included `vercel.json` applies the security and immutable-asset cache headers.
 The current Vercel deployment URL is `storyteller-page-v1.vercel.app`.
 
+The legacy Netlify deployment is configured to show a shutdown notice linking to the new Vercel URL.
+
 <p align="center">
 Built with ❤️ for writers, readers and dreamers.
 </p>
