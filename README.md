@@ -24,6 +24,7 @@ Whether you're sharing a short story, a personal journey, poetry, or an original
 
 # Features
 
+<<<<<<< HEAD
 * ✍️ Publish original stories
 * 📚 Read stories from different genres
 * ❤️ Like, bookmark and follow your favourite writers
@@ -37,6 +38,18 @@ Whether you're sharing a short story, a personal journey, poetry, or an original
 * 🛡️ Community moderation and reporting tools
 * 📖 Personal reading library and history
 * ⚡ Fast, lightweight browsing experience
+=======
+| Layer | Technology |
+| --- | --- |
+| Frontend | HTML, CSS, and vanilla JavaScript |
+| Authentication | Supabase Auth |
+| Database | Supabase Postgres with Row Level Security |
+| Media | Supabase Storage |
+| Server-side logic | Supabase Edge Functions |
+| Hosting | Vercel |
+| Content sanitization | DOMPurify 3.4.12 |
+| Browser client | Supabase JS 2.110.7 |
+>>>>>>> d4eb75b (Configure Vercel hosting)
 
 ---
 
@@ -82,7 +95,8 @@ Your feedback helps make Storyteller better for everyone.
 
 🌐 https://storyteller-v1.netlify.app/
 
----
+Production deploys from `main` through Vercel. Import this repository in Vercel, leave the framework preset as **Other**, keep the root directory as `.`, and leave the build command and output directory empty. Vercel serves `index.html` and the existing `assets/`, `css/`, `js/`, and `vendor/` directories directly. The included `vercel.json` applies the security and immutable-asset cache headers.
+Vercel project URL will be available after the repository is imported and deployed.
 
 <p align="center">
 Built with ❤️ for writers, readers and dreamers.
