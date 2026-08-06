@@ -9,7 +9,7 @@ A cinematic platform where stories find their voice.
 </p>
 
 <p align="center">
-  <a href="https://kabirprokk.github.io/Storyteller_v1/">Visit Storyteller</a>
+  <a href="https://storyteller-v1.vercel.app/">Visit Storyteller</a>
 </p>
 
 ![Storyteller](assets/hero-stories.png)
@@ -93,10 +93,10 @@ Your feedback helps make Storyteller better for everyone.
 
 # Website
 
-🌐 https://storyteller-v1.netlify.app/
+🌐 https://storyteller-v1.vercel.app/
 
 Production deploys from `main` through Vercel. Import this repository in Vercel, leave the framework preset as **Other**, keep the root directory as `.`, and leave the build command and output directory empty. Vercel serves `index.html` and the existing `assets/`, `css/`, `js/`, and `vendor/` directories directly. The included `vercel.json` applies the security and immutable-asset cache headers.
-Vercel project URL will be available after the repository is imported and deployed.
+The current Vercel deployment alias is `storyteller-kohl-ten.vercel.app`; set `storyteller-v1.vercel.app` as the project domain in Vercel for the canonical URL.
 
 <p align="center">
 Built with ❤️ for writers, readers and dreamers.
