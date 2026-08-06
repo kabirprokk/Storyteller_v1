@@ -1,4 +1,9 @@
-[[redirects]]
-  from = "/*"
-  to = "/netlify-shutdown.html"
-  status = 200
+[build]
+  command = "mkdir -p .netlify-shutdown && cp netlify-shutdown.html .netlify-shutdown/index.html"
+  publish = ".netlify-shutdown"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Robots-Tag = "noindex, nofollow"
