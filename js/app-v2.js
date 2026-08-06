@@ -649,6 +649,10 @@ function auth(mode = 'signin', msg = '') {
         <p>${esc(msg || 'Read, write, save, and join the conversation.')}</p>
         <button type="button" class="social" data-provider="google">Continue with Google</button>
         <button type="button" class="social" data-provider="github">Continue with GitHub</button>
+        <div class="auth-provider-note" role="note">
+          <span class="auth-provider-icon" aria-hidden="true">✓</span>
+          <p><strong>Secure Storyteller login</strong><br>Google may show <code>syemkwyfefzdmogtsvmi.supabase.co</code>. This is Storyteller's official authentication service, so seeing it during sign-in is expected and safe.</p>
+        </div>
         ${signup ? '<small>Social signup creates a Reader account. Choose email signup below to become a Writer.</small>' : ''}
         <div class="divider">or use email</div>
         ${signup ? '<div class="field"><label>Display name</label><input id="authName" required maxlength="80"></div>' : ''}
