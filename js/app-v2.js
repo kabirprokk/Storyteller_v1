@@ -118,6 +118,29 @@ const splitStoryPages = html => {
     .filter(Boolean);
   return pages.length ? pages : ['<p>Tell your story...</p>'];
 };
+const paginateStoryHtml = (html, maxWords = 520) => {
+  const manualPages = splitStoryPages(html);
+  const pages = [];
+  manualPages.forEach(manualPage => {
+    const parsed = new DOMParser().parseFromString(`<div>${manualPage}</div>`, 'text/html');
+    const blocks = [...(parsed.body.firstElementChild?.childNodes || [])].filter(node => node.nodeType === 1 || String(node.textContent || '').trim());
+    let current = '';
+    let count = 0;
+    blocks.forEach(block => {
+      const blockHtml = block.nodeType === 1 ? block.outerHTML : `<p>${esc(block.textContent || '')}</p>`;
+      const blockWords = words(stripHtml(blockHtml));
+      if (current && count + blockWords > maxWords) {
+        pages.push(current);
+        current = '';
+        count = 0;
+      }
+      current += blockHtml;
+      count += blockWords;
+    });
+    if (current) pages.push(current);
+  });
+  return pages.length ? pages : ['<p>Tell your story...</p>'];
+};
 const syncActiveEditorPage = () => {
   const editor = $('#storyContent');
   if (editor) editorPages[activeEditorPage] = editor.innerHTML || '<p></p>';
@@ -591,7 +614,7 @@ function explore() {
 function reader(story) {
   if (!story) return `<div class="page auth-wrap">${empty('Story not found', 'It may have been removed.')}</div>`;
 
-  const pages = splitStoryPages(sanitizeStoryHtml(story.content || ''));
+  const pages = paginateStoryHtml(sanitizeStoryHtml(story.content || ''));
   const isPublished = story.status === 'published';
   const index = stories.findIndex(item => item.slug === story.slug);
   const prev = index > 0 ? stories[index - 1] : null;
