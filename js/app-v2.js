@@ -119,6 +119,30 @@ const splitStoryPages = html => {
     .filter(Boolean);
   return pages.length ? pages : ['<p>Tell your story...</p>'];
 };
+const copyCurrentStoryLink = async () => {
+  const link = location.href;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(link);
+      toast('Story link copied');
+      return;
+    }
+  } catch {}
+  try {
+    const field = document.createElement('textarea');
+    field.value = link;
+    field.setAttribute('readonly', '');
+    field.style.position = 'fixed';
+    field.style.opacity = '0';
+    document.body.append(field);
+    field.select();
+    document.execCommand('copy');
+    field.remove();
+    toast('Story link copied');
+  } catch {
+    window.prompt('Copy this story link:', link);
+  }
+};
 const paginateStoryHtml = (html, maxWords = 520) => {
   const manualPages = splitStoryPages(html);
   const pages = [];
@@ -1806,16 +1830,13 @@ $('#comment')?.addEventListener('click', async () => {
     const finishShare = () => { shareInFlight = false; };
     if (navigator.share) {
       navigator.share({ title: currentStory.title, url: location.href })
-        .catch(error => { if (error?.name !== 'AbortError' && error?.name !== 'InvalidStateError') console.warn('Share failed', error); })
+        .catch(error => { if (error?.name !== 'AbortError') return copyCurrentStoryLink(); })
         .finally(finishShare);
     } else if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(location.href)
-        .then(() => toast('Link copied'))
-        .catch(() => toast('Copy the story link from your browser'))
+      copyCurrentStoryLink()
         .finally(finishShare);
     } else {
-      finishShare();
-      toast('Copy the story link from your browser');
+      copyCurrentStoryLink().finally(finishShare);
     }
   });
   $('.auth-card:not(.resetForm)')?.addEventListener('submit', handleAuth);
