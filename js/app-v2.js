@@ -19,6 +19,7 @@ let likedStoryIds = new Set();
 let bookmarkedStoryIds = new Set();
 let editorPages = ['<p>Tell your story...</p>'];
 let activeEditorPage = 0;
+let readerPageIndex = 0;
 const PAGE_BREAK = '<hr data-story-page-break="true">';
 const logo = 'assets/storyteller-mark-64.png';
 const supportEmail = 'kabirsayed.k@gmail.com';
@@ -175,6 +176,150 @@ const sanitizeStoryHtml = html => DOMPurify.sanitize(html || '<p></p>', {
   FORBID_TAGS: ['style', 'form', 'input', 'button', 'iframe'],
 });
 
+const zipText = bytes => new TextDecoder().decode(bytes);
+const zipBytes = (buffer, start, length) => new Uint8Array(buffer, start, length);
+const zipEntries = async buffer => {
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+  let end = -1;
+  for (let i = Math.max(0, bytes.length - 65558); i <= bytes.length - 4; i += 1) {
+    if (view.getUint32(i, true) === 0x06054b50) end = i;
+  }
+  if (end < 0) throw new Error('This DOCX file is not a valid ZIP document');
+  const centralSize = view.getUint32(end + 12, true);
+  const centralOffset = view.getUint32(end + 16, true);
+  const entries = new Map();
+  let cursor = centralOffset;
+  const centralEnd = centralOffset + centralSize;
+  while (cursor < centralEnd && view.getUint32(cursor, true) === 0x02014b50) {
+    const method = view.getUint16(cursor + 10, true);
+    const compressedSize = view.getUint32(cursor + 20, true);
+    const nameLength = view.getUint16(cursor + 28, true);
+    const extraLength = view.getUint16(cursor + 30, true);
+    const commentLength = view.getUint16(cursor + 32, true);
+    const localOffset = view.getUint32(cursor + 42, true);
+    const name = zipText(zipBytes(buffer, cursor + 46, nameLength));
+    const localNameLength = view.getUint16(localOffset + 26, true);
+    const localExtraLength = view.getUint16(localOffset + 28, true);
+    const dataStart = localOffset + 30 + localNameLength + localExtraLength;
+    const compressed = zipBytes(buffer, dataStart, compressedSize);
+    let data;
+    if (method === 0) data = compressed;
+    else if (method === 8 && typeof DecompressionStream === 'function') {
+      const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      data = new Uint8Array(await new Response(stream).arrayBuffer());
+    } else throw new Error('This browser cannot open compressed DOCX files');
+    entries.set(name, data);
+    cursor += 46 + nameLength + extraLength + commentLength;
+  }
+  return entries;
+};
+const xmlChildren = (node, name) => [...(node?.childNodes || [])].filter(child => child.localName === name);
+const xmlFirst = (node, name) => [...(node?.getElementsByTagNameNS?.('*', name) || [])][0] || null;
+const xmlAttr = (node, name) => node
+  ? (node.getAttribute(name) || node.getAttribute(`w:${name}`) || node.getAttribute(`r:${name}`) || node.getAttributeNS?.('http://schemas.openxmlformats.org/wordprocessingml/2006/main', name) || node.getAttributeNS?.('http://schemas.openxmlformats.org/officeDocument/2006/relationships', name) || '')
+  : '';
+const xmlStyleValue = (node, name) => xmlAttr(xmlFirst(node, name), 'val');
+const resolveDocxTarget = target => {
+  const clean = String(target || '').replace(/^\.\//, '').replace(/^\.\.\//, '');
+  return clean.startsWith('word/') ? clean : `word/${clean}`;
+};
+const docxRelationshipMap = xml => {
+  const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  const map = new Map();
+  [...doc.getElementsByTagName('*')].filter(node => node.localName === 'Relationship').forEach(node => {
+    map.set(node.getAttribute('Id'), resolveDocxTarget(node.getAttribute('Target')));
+  });
+  return map;
+};
+const docxDataUri = (bytes, contentType = 'image/png') => {
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  return `data:${contentType};base64,${btoa(binary)}`;
+};
+const docxMediaType = name => ({png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',gif:'image/gif',bmp:'image/bmp',webp:'image/webp',svg:'image/svg+xml'}[String(name).split('.').pop().toLowerCase()] || 'application/octet-stream');
+const docxInlineStyle = rPr => {
+  const styles = [];
+  const fontNode = xmlFirst(rPr, 'rFonts');
+  const font = fontNode && (xmlAttr(fontNode, 'ascii') || xmlAttr(fontNode, 'hAnsi') || xmlAttr(fontNode, 'eastAsia'));
+  const color = xmlStyleValue(rPr, 'color');
+  const size = xmlStyleValue(rPr, 'sz');
+  const highlight = xmlStyleValue(rPr, 'highlight');
+  const shading = xmlStyleValue(rPr, 'shd');
+  if (font) styles.push(`font-family:${font.replace(/"/g, '')}`);
+  if (color && color !== 'auto') styles.push(`color:#${color}`);
+  if (size) styles.push(`font-size:${Math.max(1, Number(size) / 2)}pt`);
+  if (highlight && highlight !== 'none') styles.push(`background-color:${highlight}`);
+  if (shading && shading !== 'clear' && shading !== 'nil') styles.push(`background-color:#${shading}`);
+  if (xmlFirst(rPr, 'b')) styles.push('font-weight:700');
+  if (xmlFirst(rPr, 'i')) styles.push('font-style:italic');
+  if (xmlFirst(rPr, 'u')) styles.push('text-decoration:underline');
+  return styles.join(';');
+};
+const docxImageHtml = (run, relationships, entries) => {
+  const blip = xmlFirst(run, 'blip');
+  const relId = blip ? (blip.getAttribute('r:embed') || blip.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'embed')) : '';
+  const target = relationships.get(relId);
+  const data = target && entries.get(target);
+  if (!data) return '';
+  const extent = xmlFirst(run, 'ext');
+  const width = extent ? Math.min(100, Math.max(20, Number(extent.getAttribute('cx') || 0) / 9525 / 6)) : 100;
+  return `<img src="${docxDataUri(data, docxMediaType(target))}" alt="Imported image" style="max-width:100%;width:${width.toFixed(1)}rem;height:auto">`;
+};
+const docxRunHtml = (run, relationships, entries) => {
+  const rPr = xmlFirst(run, 'rPr');
+  const style = docxInlineStyle(rPr);
+  let html = '';
+  [...run.childNodes].forEach(node => {
+    if (node.localName === 't' || node.localName === 'delText') html += esc(node.textContent || '');
+    else if (node.localName === 'tab') html += '&emsp;';
+    else if (node.localName === 'br' && node.getAttribute('type') === 'page') html += PAGE_BREAK;
+    else if (node.localName === 'br' || node.localName === 'cr') html += '<br>';
+    else if (node.localName === 'drawing' || node.localName === 'pict') html += docxImageHtml(node, relationships, entries);
+  });
+  if (!html) return '';
+  return style ? `<span style="${esc(style)}">${html}</span>` : html;
+};
+const docxParagraphHtml = (paragraph, relationships, entries) => {
+  const pPr = xmlChildren(paragraph, 'pPr')[0];
+  const styles = [];
+  const align = xmlStyleValue(pPr, 'jc');
+  const spacing = xmlFirst(pPr, 'spacing');
+  if (align) styles.push(`text-align:${align}`);
+  if (spacing?.getAttribute('before')) styles.push(`margin-top:${Number(spacing.getAttribute('before')) / 20}pt`);
+  if (spacing?.getAttribute('after')) styles.push(`margin-bottom:${Number(spacing.getAttribute('after')) / 20}pt`);
+  let html = '';
+  [...paragraph.childNodes].forEach(node => {
+    if (node.localName === 'r') html += docxRunHtml(node, relationships, entries);
+    else if (node.localName === 'hyperlink' || node.localName === 'ins' || node.localName === 'smartTag') [...node.childNodes].filter(child => child.localName === 'r').forEach(child => { html += docxRunHtml(child, relationships, entries); });
+  });
+  if (!html.trim()) return '';
+  const chunks = html.split(PAGE_BREAK);
+  return chunks.map((chunk, index) => `${styles.length ? `<p style="${esc(styles.join(';'))}">` : '<p>'}${chunk || '<br>'}</p>${index < chunks.length - 1 ? PAGE_BREAK : ''}`).join('');
+};
+const docxTableHtml = (table, relationships, entries) => {
+  const rows = xmlChildren(table, 'tr').map(row => `<tr>${xmlChildren(row, 'tc').map(cell => `<td>${xmlChildren(cell, 'p').map(paragraph => docxParagraphHtml(paragraph, relationships, entries)).join('')}</td>`).join('')}</tr>`).join('');
+  return rows ? `<table><tbody>${rows}</tbody></table>` : '';
+};
+const importDocx = async file => {
+  if (!file) return;
+  if (file.size > 20 * 1024 * 1024) throw new Error('DOCX files must be under 20 MB');
+  const entries = await zipEntries(await file.arrayBuffer());
+  const documentXml = entries.get('word/document.xml');
+  if (!documentXml) throw new Error('The DOCX document body could not be read');
+  const relationships = docxRelationshipMap(zipText(entries.get('word/_rels/document.xml.rels') || new Uint8Array()));
+  const document = new DOMParser().parseFromString(zipText(documentXml), 'application/xml');
+  if (document.getElementsByTagName('parsererror').length) throw new Error('The DOCX document XML could not be parsed');
+  const body = xmlFirst(document, 'body');
+  const content = [...(body?.childNodes || [])].map(node => node.localName === 'p'
+    ? docxParagraphHtml(node, relationships, entries)
+    : node.localName === 'tbl' ? docxTableHtml(node, relationships, entries) : '').join('');
+  const core = entries.get('docProps/core.xml') ? new DOMParser().parseFromString(zipText(entries.get('docProps/core.xml')), 'application/xml') : null;
+  const title = xmlFirst(core, 'title')?.textContent?.trim() || titleFromFilename(file.name);
+  const subtitle = xmlFirst(core, 'subject')?.textContent?.trim() || '';
+  return { title, subtitle, content: sanitizeStoryHtml(content || '<p></p>') };
+};
+
 function editorPreview() {
   const box = $('#storyPreview');
   if (!box) return;
@@ -225,6 +370,20 @@ async function importTxtStory(file) {
     renderPageManager();
   }
 
+  $('#saveState') && ($('#saveState').textContent = 'Unsaved');
+  saveEditorBackup();
+  editorStats();
+  toast(`Imported ${file.name}`);
+}
+async function importDocxStory(file) {
+  if (!file) return;
+  const data = await importDocx(file);
+  if ($('#storyTitle') && !$('#storyTitle').value.trim()) $('#storyTitle').value = data.title;
+  if ($('#storySubtitle') && !$('#storySubtitle').value.trim() && data.subtitle) $('#storySubtitle').value = data.subtitle;
+  editorPages = splitStoryPages(data.content);
+  activeEditorPage = 0;
+  if ($('#storyContent')) $('#storyContent').innerHTML = editorPages[0];
+  renderPageManager();
   $('#saveState') && ($('#saveState').textContent = 'Unsaved');
   saveEditorBackup();
   editorStats();
@@ -432,7 +591,7 @@ function explore() {
 function reader(story) {
   if (!story) return `<div class="page auth-wrap">${empty('Story not found', 'It may have been removed.')}</div>`;
 
-  const content = sanitizeStoryHtml(story.content || '').replace(/<hr\b[^>]*data-story-page-break(?:="true")?[^>]*>/gi, '<div class="reader-page-break"><span>Next page</span></div>');
+  const pages = splitStoryPages(sanitizeStoryHtml(story.content || ''));
   const isPublished = story.status === 'published';
   const index = stories.findIndex(item => item.slug === story.slug);
   const prev = index > 0 ? stories[index - 1] : null;
@@ -440,6 +599,16 @@ function reader(story) {
   const related = stories
     .filter(item => item.id !== story.id && (item.categoryId === story.categoryId || item.tags.some(tag => (story.tags || []).includes(tag))))
     .slice(0, 3);
+  const readerEnd = `
+    <div class="reader-end">
+      <span class="eyebrow">The end</span>
+      <h2>Did this story move you?</h2>
+      <button class="btn primary like ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-pressed="${likedStoryIds.has(story.id)}"><span class="btn-icon">${icons.heart}</span><span>Appreciate · ${story.likes}</span></button>
+      <div class="story-nav">
+        ${prev ? `<a class="btn" href="#story/${prev.slug}">Previous story</a>` : '<span class="btn disabled">Previous story</span>'}
+        ${next ? `<a class="btn" href="#story/${next.slug}">Next story</a>` : '<span class="btn disabled">Next story</span>'}
+      </div>
+    </div>`;
 
   return `
     <article class="page reader">
@@ -482,15 +651,14 @@ function reader(story) {
         <button class="share icon-btn" aria-label="Share story">${icons.share}</button>
       </div>
 
-      <div class="reader-body">${content}
-        <div class="reader-end">
-          <span class="eyebrow">The end</span>
-          <h2>Did this story move you?</h2>
-          <button class="btn primary like ${likedStoryIds.has(story.id) ? 'active' : ''}" data-id="${story.id}" aria-pressed="${likedStoryIds.has(story.id)}"><span class="btn-icon">${icons.heart}</span><span>Appreciate · ${story.likes}</span></button>
-          <div class="story-nav">
-            ${prev ? `<a class="btn" href="#story/${prev.slug}">Previous story</a>` : '<span class="btn disabled">Previous story</span>'}
-            ${next ? `<a class="btn" href="#story/${next.slug}">Next story</a>` : '<span class="btn disabled">Next story</span>'}
+      <div class="reader-body">
+        <div class="reader-book">
+          <button class="reader-page-arrow reader-page-prev" type="button" data-reader-direction="-1" aria-label="Previous page">←</button>
+          <div class="reader-pages" aria-live="polite">
+            ${pages.map((page, pageIndex) => `<section class="reader-paper" data-reader-page="${pageIndex}" ${pageIndex ? 'hidden' : ''}>${page}${pageIndex === pages.length - 1 ? readerEnd : ''}</section>`).join('')}
           </div>
+          <button class="reader-page-arrow reader-page-next" type="button" data-reader-direction="1" aria-label="Next page">→</button>
+          <div class="reader-page-status" id="readerPageStatus">Page 1 of ${pages.length}</div>
         </div>
       </div>
 
@@ -521,6 +689,20 @@ function reader(story) {
       </div>
     </article>
   `;
+}
+
+function setReaderPage(index, scroll = true) {
+  const pages = $$('.reader-paper');
+  if (!pages.length) return;
+  readerPageIndex = Math.max(0, Math.min(index, pages.length - 1));
+  pages.forEach((page, pageIndex) => { page.hidden = pageIndex !== readerPageIndex; });
+  const status = $('#readerPageStatus');
+  if (status) status.textContent = `Page ${readerPageIndex + 1} of ${pages.length}`;
+  const previous = $('.reader-page-prev');
+  const next = $('.reader-page-next');
+  if (previous) previous.disabled = readerPageIndex === 0;
+  if (next) next.disabled = readerPageIndex === pages.length - 1;
+  if (scroll) $('.reader-book')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function write(story = null) {
@@ -569,11 +751,13 @@ function write(story = null) {
           <button class="btn" id="previewToggle" type="button">Preview</button>
           <button class="btn" id="importTxt" type="button">Import .txt</button>
           <input id="storyTxt" type="file" accept=".txt,text/plain" hidden>
+          <button class="btn" id="importDocx" type="button">Import .docx</button>
+          <input id="storyDocx" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
           <button class="btn saveDraft" type="button">Save draft</button>
           <button class="btn primary publish" type="button">Publish</button>
         </div>
       </div>
-      <p class="editor-note">Upload a plain text story file, split longer work into pages, refine the layout below, and publish when it is ready.</p>
+      <p class="editor-note">Import TXT or DOCX files, split longer work into pages, refine the layout below, and publish when it is ready. DOCX formatting and embedded images are preserved where supported.</p>
       <div class="page-manager" aria-label="Story pages">
         <div>
           <span class="eyebrow">Pages</span>
@@ -847,7 +1031,7 @@ function legal(kind) {
         ['How information is used', 'We use information to create and secure accounts, publish and organize stories, maintain your library, provide social features, investigate reports, prevent abuse, support users and improve Storyteller. We do not sell personal information.'],
         ['Public information', 'Published stories, public profile fields, visible comments and aggregate engagement counts can be viewed by other visitors. Drafts, bookmarks, reading history, notifications, account roles and suspension state are not intentionally exposed to the public.'],
         ['Donation QR codes and payments', 'Publishing a writer donation QR is optional. If you enable it, the QR image becomes public on your stories and may contain a payment identifier chosen by you. Storyteller does not process donations, receive transaction details or verify payments. Payments occur in the reader’s payment app under that provider’s terms.'],
-        ['Storage and service providers', 'Supabase provides authentication, database, Edge Function and media-storage infrastructure. GitHub Pages hosts the static website. Email messages you choose to send are handled by your email provider and Gmail. Each provider processes limited information under its own terms and privacy practices.'],
+        ['Storage and service providers', 'Supabase provides authentication, database, Edge Function and media-storage infrastructure. Vercel hosts the static website. Email messages you choose to send are handled by your email provider and Gmail. Each provider processes limited information under its own terms and privacy practices.'],
         ['Browser storage', 'Storyteller uses browser storage for authentication sessions, theme preferences and the current-tab human-verification state. Clearing site data or signing out removes or invalidates applicable local state.'],
         ['Security and retention', 'We use database access policies, minimized public views, content sanitization and restricted administrative functions. No online service can guarantee absolute security. Information is retained while needed to provide the service, meet security or moderation needs, resolve disputes and comply with applicable obligations.'],
         ['Your choices', 'You can edit your profile, drafts and published work, delete your stories and sign out at any time. To request account deletion, access or correction that is not available in the product, contact the administrator. Public copies shared by others or required moderation records may not disappear immediately.'],
@@ -1490,10 +1674,13 @@ $('#comment')?.addEventListener('click', async () => {
 
   $('#storyContent')?.addEventListener('dragover', event => event.preventDefault());
   $('#storyContent')?.addEventListener('drop', async event => {
-    const file = [...(event.dataTransfer?.files || [])].find(item => /\.txt$/i.test(item.name) || item.type === 'text/plain');
+    const file = [...(event.dataTransfer?.files || [])].find(item => /\.txt$/i.test(item.name) || item.type === 'text/plain' || /\.docx$/i.test(item.name) || item.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     if (!file) return;
     event.preventDefault();
-    await importTxtStory(file);
+    try {
+      if (/\.docx$/i.test(file.name) || file.type.includes('wordprocessingml')) await importDocxStory(file);
+      else await importTxtStory(file);
+    } catch (error) { authFail(error); }
   });
 
   $('#previewToggle')?.addEventListener('click', () => {
@@ -1508,6 +1695,14 @@ $('#comment')?.addEventListener('click', async () => {
   $('#storyTxt')?.addEventListener('change', async event => {
     const file = event.target.files?.[0];
     if (file) await importTxtStory(file);
+    event.target.value = '';
+  });
+  $('#importDocx')?.addEventListener('click', () => $('#storyDocx')?.click());
+  $('#storyDocx')?.addEventListener('change', async event => {
+    const file = event.target.files?.[0];
+    if (file) {
+      try { await importDocxStory(file); } catch (error) { authFail(error); }
+    }
     event.target.value = '';
   });
 
@@ -1531,6 +1726,11 @@ $('#comment')?.addEventListener('click', async () => {
     event.currentTarget.classList.toggle('active', enlarged);
     event.currentTarget.setAttribute('aria-pressed', String(enlarged));
   });
+  readerPageIndex = 0;
+  $$('.reader-page-arrow').forEach(button => button.addEventListener('click', () => {
+    setReaderPage(readerPageIndex + Number(button.dataset.readerDirection || 0));
+  }));
+  setReaderPage(0, false);
   $('#readerMode')?.addEventListener('click', () => toggleTheme());
   $('.share')?.addEventListener('click', event => {
     const button = event.currentTarget;

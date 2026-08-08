@@ -24,7 +24,6 @@ Whether you're sharing a short story, a personal journey, poetry, or an original
 
 # Features
 
-<<<<<<< HEAD
 * ✍️ Publish original stories
 * 📚 Read stories from different genres
 * ❤️ Like, bookmark and follow your favourite writers
@@ -38,7 +37,9 @@ Whether you're sharing a short story, a personal journey, poetry, or an original
 * 🛡️ Community moderation and reporting tools
 * 📖 Personal reading library and history
 * ⚡ Fast, lightweight browsing experience
-=======
+* DOCX import with inline formatting, colors, fonts, tables, page breaks, and embedded images preserved where supported
+* Paginated story reader with white paper-style pages, page counters, and previous/next controls
+
 | Layer | Technology |
 | --- | --- |
 | Frontend | HTML, CSS, and vanilla JavaScript |
@@ -49,7 +50,6 @@ Whether you're sharing a short story, a personal journey, poetry, or an original
 | Hosting | Vercel |
 | Content sanitization | DOMPurify 3.4.12 |
 | Browser client | Supabase JS 2.110.7 |
->>>>>>> d4eb75b (Configure Vercel hosting)
 
 ---
 
