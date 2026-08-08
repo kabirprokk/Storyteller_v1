@@ -11,6 +11,7 @@ let browseState = { category: '', query: '', sort: 'latest' };
 let timer = null;
 let saveQueue = Promise.resolve();
 let readTimer = null;
+let shareInFlight = false;
 let filterRequest = 0;
 let heroTimer = null;
 let adminMode = false;
@@ -1798,10 +1799,24 @@ $('#comment')?.addEventListener('click', async () => {
   $('#readerMode')?.addEventListener('click', () => toggleTheme());
   $('.share')?.addEventListener('click', event => {
     const button = event.currentTarget;
+    if (shareInFlight) return;
     button.classList.add('active');
     window.setTimeout(() => button.classList.remove('active'), 700);
-    if (navigator.share) navigator.share({ title: currentStory.title, url: location.href });
-    else navigator.clipboard.writeText(location.href).then(() => toast('Link copied'));
+    shareInFlight = true;
+    const finishShare = () => { shareInFlight = false; };
+    if (navigator.share) {
+      navigator.share({ title: currentStory.title, url: location.href })
+        .catch(error => { if (error?.name !== 'AbortError' && error?.name !== 'InvalidStateError') console.warn('Share failed', error); })
+        .finally(finishShare);
+    } else if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(location.href)
+        .then(() => toast('Link copied'))
+        .catch(() => toast('Copy the story link from your browser'))
+        .finally(finishShare);
+    } else {
+      finishShare();
+      toast('Copy the story link from your browser');
+    }
   });
   $('.auth-card:not(.resetForm)')?.addEventListener('submit', handleAuth);
   $$('input[name="accountRole"]').forEach(input => input.addEventListener('change', () => {
