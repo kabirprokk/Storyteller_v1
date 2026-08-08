@@ -1344,7 +1344,7 @@ async function route() {
         currentStory = await StoryAPI.story(decodeURIComponent(arg || ''));
         $('#app').innerHTML = reader(currentStory);
       }
-    } else if (page === 'explore') {
+    } else if (page === 'explore' || page === 'read') {
       browseState = { category: arg || '', query: '', sort: 'latest' };
       stories = await StoryAPI.stories({ ...browseState, from: 0, to: 11 });
       $('#app').innerHTML = explore();
