@@ -611,6 +611,37 @@ function explore() {
   `;
 }
 
+function read() {
+  const published = [...stories]
+    .filter(story => story.status === 'published')
+    .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+  const cards = published.map((story, index) => card(story).replace('<article class="story', `<article style="--read-index:${index}" class="story`)).join('');
+  return `
+    <div class="page read-page">
+      <div class="read-head container">
+        <div>
+          <span class="eyebrow">The reading room</span>
+          <h1 class="page-title">Choose a story.<br><em>Stay awhile.</em></h1>
+          <p>Slide through the latest stories and choose the one that speaks to you.</p>
+        </div>
+        <div class="read-controls" aria-label="Story carousel controls">
+          <button class="read-scroll" id="readPrev" type="button" data-read-direction="-1" aria-label="Scroll stories left">←</button>
+          <button class="read-scroll" id="readNext" type="button" data-read-direction="1" aria-label="Scroll stories right">→</button>
+        </div>
+      </div>
+      <section class="read-showcase">
+        <div class="container">
+          <div class="read-rail" id="readRail" tabindex="0" aria-label="Published stories">
+            ${cards || empty('No published stories yet', 'The reading room will open when the first story is published.')}
+          </div>
+          ${published.length ? `<div class="read-hint"><span>Drag or swipe to browse</span><span>${published.length} stor${published.length === 1 ? 'y' : 'ies'} available</span></div>` : ''}
+        </div>
+      </section>
+      ${footer()}
+    </div>
+  `;
+}
+
 function reader(story) {
   if (!story) return `<div class="page auth-wrap">${empty('Story not found', 'It may have been removed.')}</div>`;
 
@@ -1344,10 +1375,14 @@ async function route() {
         currentStory = await StoryAPI.story(decodeURIComponent(arg || ''));
         $('#app').innerHTML = reader(currentStory);
       }
-    } else if (page === 'explore' || page === 'read') {
+    } else if (page === 'explore') {
       browseState = { category: arg || '', query: '', sort: 'latest' };
       stories = await StoryAPI.stories({ ...browseState, from: 0, to: 11 });
       $('#app').innerHTML = explore();
+    } else if (page === 'read') {
+      browseState = { category: '', query: '', sort: 'latest' };
+      stories = await StoryAPI.stories({ ...browseState, from: 0, to: 47 });
+      $('#app').innerHTML = read();
     } else if (page === 'profile') {
       $('#app').innerHTML = await profile(arg || 'published');
     } else if (page === 'admin' || page.startsWith('admin-')) {
@@ -1743,6 +1778,12 @@ $('#comment')?.addEventListener('click', async () => {
     }
   });
 
+  $$('.read-scroll').forEach(button => button.addEventListener('click', () => {
+    const rail = $('#readRail');
+    if (!rail) return;
+    const direction = Number(button.dataset.readDirection || 1);
+    rail.scrollBy({ left: direction * Math.max(260, rail.clientWidth * 0.78), behavior: 'smooth' });
+  }));
 
   $('#font')?.addEventListener('click', event => {
     const enlarged = $('.reader-body')?.classList.toggle('reader-large') ?? false;
