@@ -35,8 +35,29 @@
 
   window.StoryAPI = {
     client, configured,
-    async session() { if (!client) return null; const {data} = await client.auth.getSession(); return data.session; },
-    onAuthChange(fn) { return client?.auth.onAuthStateChange((event, session) => fn(session,event)); },
+    async session(forceRefresh=false) {
+      if (!client) return null;
+      const {data,error} = await client.auth.getSession();
+      if (error) throw error;
+      if (!data.session || !forceRefresh) return data.session;
+
+      // A suspended tab or an incorrect device clock can leave a cached JWT
+      // that PostgREST rejects before the automatic refresh timer runs.
+      const {data:refreshed,error:refreshError} = await client.auth.refreshSession(data.session);
+      if (!refreshError && refreshed.session) return refreshed.session;
+
+      // If the refresh token is no longer usable, clear only this browser's
+      // stale session so public pages can continue with the anonymous key.
+      try { await client.auth.signOut({scope:'local'}); } catch {}
+      return null;
+    },
+    onAuthChange(fn) {
+      return client?.auth.onAuthStateChange((event, session) => {
+        // Run application queries after Supabase finishes its internal auth
+        // callback to avoid lock contention during token refresh.
+        setTimeout(() => { Promise.resolve(fn(session,event)).catch(() => {}); }, 0);
+      });
+    },
     async signUp(email,password,displayName,role='reader',contactEmail='',contactSource='',instagramHandle='') { const publicRole=role==='writer'?'writer':'reader';const metadata={display_name:displayName.trim(),username:usernameFromName(displayName),role:publicRole};if(publicRole==='writer'){metadata.contact_email=contactEmail.trim().toLowerCase();metadata.contact_source=contactSource.trim();metadata.instagram_handle=instagramHandle.trim().replace(/^@/,'');}const {data,error}=await required().auth.signUp({email,password,options:{data:metadata}});if(error)throw error;return data; },
     async signIn(email,password) { const {data,error}=await required().auth.signInWithPassword({email,password}); if(error)throw error; return data; },
     async social(provider) { const {error}=await required().auth.signInWithOAuth({provider,options:{redirectTo:location.href.split('#')[0]}}); if(error)throw error; },

@@ -2219,6 +2219,10 @@ function authFail(error) {
   if (/sign in/i.test(error.message || '')) setTimeout(() => { location.hash = 'auth/signin'; }, 500);
 }
 
+function isExpiredSessionError(error) {
+  return error?.code === 'PGRST303' || /JWT expired|refresh token/i.test(error?.message || '');
+}
+
 function fail(error) {
   console.error(error);
   $('#app').innerHTML = `<div class="page auth-wrap">${empty('Something went wrong', error.message)}</div>`;
@@ -2413,29 +2417,44 @@ addEventListener('scroll', () => {
 
 (async () => {
   if (StoryAPI.configured) {
-    session = await StoryAPI.session();
+    // Refresh once on startup before any database request. This prevents an
+    // expired cached JWT from turning every otherwise-public request into 401.
+    session = await StoryAPI.session(true);
     accountRole = session ? ((await StoryAPI.profile())?.role || 'reader') : 'guest';
     await refresh();
     adminMode = session ? await StoryAPI.isAdmin() : false;
     syncRoleNavigation();
     await syncNavbarAvatar();
     StoryAPI.onAuthChange(async (nextSession, event) => {
-      const previousUserId = session?.user?.id || null;
-      const nextUserId = nextSession?.user?.id || null;
-      session = nextSession;
-      accountRole = nextSession ? ((await StoryAPI.profile())?.role || 'reader') : 'guest';
-      adminMode = nextSession ? await StoryAPI.isAdmin() : false;
-      syncRoleNavigation();
-      await syncNavbarAvatar();
-      if (event === 'PASSWORD_RECOVERY') {
-        location.hash = 'reset-password';
-        return;
+      try {
+        const previousUserId = session?.user?.id || null;
+        const nextUserId = nextSession?.user?.id || null;
+        session = nextSession;
+        if (event === 'PASSWORD_RECOVERY') {
+          location.hash = 'reset-password';
+          return;
+        }
+        // Supabase may emit SIGNED_IN/TOKEN_REFRESHED when a tab becomes active again.
+        // Do not re-render the SPA for the same user, because that interrupts writing.
+        if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') return;
+        if (event === 'SIGNED_IN' && previousUserId === nextUserId) return;
+        accountRole = nextSession ? ((await StoryAPI.profile())?.role || 'reader') : 'guest';
+        adminMode = nextSession ? await StoryAPI.isAdmin() : false;
+        syncRoleNavigation();
+        await syncNavbarAvatar();
+        route();
+      } catch (error) {
+        if (isExpiredSessionError(error)) {
+          session = await StoryAPI.session(true);
+          accountRole = session ? ((await StoryAPI.profile())?.role || 'reader') : 'guest';
+          adminMode = session ? await StoryAPI.isAdmin() : false;
+          syncRoleNavigation();
+          await syncNavbarAvatar();
+          route();
+          return;
+        }
+        authFail(error);
       }
-      // Supabase may emit SIGNED_IN/TOKEN_REFRESHED when a tab becomes active again.
-      // Do not re-render the SPA for the same user, because that interrupts writing.
-      if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') return;
-      if (event === 'SIGNED_IN' && previousUserId === nextUserId) return;
-      route();
     });
   }
 
