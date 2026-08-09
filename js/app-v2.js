@@ -14,6 +14,7 @@ let readTimer = null;
 let shareInFlight = false;
 let filterRequest = 0;
 let heroTimer = null;
+let hasStartedRouting = false;
 let adminMode = false;
 let accountRole = 'guest';
 let likedStoryIds = new Set();
@@ -474,15 +475,6 @@ function loadingCards(count = 6) {
   `).join('');
 }
 
-function loadingList(count = 3) {
-  return `<div class="skeleton-list" aria-busy="true" aria-label="Loading items">${Array.from({length:count}, () => `
-    <div class="skeleton-list-row" aria-hidden="true">
-      <span class="skeleton-block skeleton-list-avatar"></span>
-      <span class="skeleton-list-copy"><span class="skeleton-block skeleton-line"></span><span class="skeleton-block skeleton-line skeleton-line-short"></span></span>
-    </div>
-  `).join('')}</div>`;
-}
-
 function loadingPage(page = 'home') {
   const isReader = page === 'story';
   const cardSkeletons = loadingCards(isReader ? 1 : 6);
@@ -814,7 +806,7 @@ function reader(story) {
           </div>
         </div>
         ${isPublished ? `
-          <div id="commentList">${loadingList(3)}</div>
+          <div id="commentList"></div>
           <textarea id="commentBody" maxlength="2000" placeholder="Leave a thoughtful response..." aria-label="Comment text"></textarea>
           <button class="btn primary" id="comment">Post comment</button>
         ` : empty('Comments locked', 'Publish this draft to start a conversation.')}
@@ -1442,7 +1434,11 @@ async function route() {
   }
 
   const [page, arg] = (location.hash.slice(1) || 'home').split('/');
-  $('#app').innerHTML = loadingPage(page);
+  const isInitialLoad = !hasStartedRouting;
+  hasStartedRouting = true;
+  $('#app').innerHTML = isInitialLoad
+    ? loadingPage(page)
+    : '<div class="page auth-wrap"><div class="loader"></div></div>';
 
   try {
     if (page === 'story') {
@@ -1483,7 +1479,7 @@ async function route() {
     }
 
     scrollTo(0, 0);
-    bind();
+    bind(isInitialLoad);
 
     if (page === 'story' && currentStory?.status === 'published') {
       // View tracking is non-critical. Do not surface transient network/CORS
@@ -1594,9 +1590,9 @@ function enhanceFormLabels() {
   });
 }
 
-function bind() {
-  startHeroRotation();
-  bindMediaSkeletons();
+function bind(useMediaSkeletons = false) {
+  startHeroRotation(useMediaSkeletons);
+  if (useMediaSkeletons) bindMediaSkeletons();
   enhanceFormLabels();
   requestAnimationFrame(() => $$('.reveal').forEach(card => card.classList.add('seen')));
 
@@ -1973,13 +1969,13 @@ $('#comment')?.addEventListener('click', async () => {
   editorStats();
 }
 
-function startHeroRotation() {
+function startHeroRotation(useMediaSkeletons = false) {
   clearInterval(heroTimer);
   heroTimer = null;
   const slides = $$('.hero-slide');
   if (slides.length < 2) return;
 
-  slides.forEach(slide => loadBackgroundMedia(slide));
+  if (useMediaSkeletons) slides.forEach(slide => loadBackgroundMedia(slide));
 
   slides.forEach((slide, index) => slide.classList.toggle('active', index === 0));
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -2162,8 +2158,6 @@ async function filter() {
     query: $('#exploreSearch').value.trim(),
     sort: $('#sort').value,
   };
-
-  if ($('#storyGrid')) $('#storyGrid').innerHTML = loadingCards(6);
 
   const results = await StoryAPI.stories({ ...browseState, from: 0, to: 11 });
   if (requestId !== filterRequest) return;
@@ -2408,7 +2402,6 @@ $('#searchInput').oninput = debounce(async event => {
   const query = event.target.value.trim();
   if (!query) return ($('#results').innerHTML = '');
   try {
-    $('#results').innerHTML = loadingList(3);
     const results = await StoryAPI.stories({ query, to: 4 });
     $('#results').innerHTML = results.length ? results.map(story => `
       <a class="result" href="#story/${encodeURIComponent(story.slug)}">
@@ -2416,7 +2409,6 @@ $('#searchInput').oninput = debounce(async event => {
         <span><b>${esc(story.title)}</b><small>${esc(story.author)}</small></span>
       </a>
     `).join('') : empty('No matches', 'Try another title or subtitle.');
-    bindMediaSkeletons();
   } catch (error) {
     $('#results').innerHTML = empty('Search unavailable', 'Please try again.');
   }
@@ -2429,7 +2421,6 @@ $('#bell').onclick = async () => {
   try {
     $('#notifications').classList.toggle('open');
     syncChromeIcons();
-    $('#notificationList').innerHTML = loadingList(3);
     const items = await StoryAPI.notifications();
     $('#notificationList').innerHTML = items.length
       ? items.map(notification => `
@@ -2442,7 +2433,6 @@ $('#bell').onclick = async () => {
           </div>
         `).join('')
       : empty('All caught up', 'No notifications.');
-    bindMediaSkeletons();
   } catch (error) {
     authFail(error);
   }
