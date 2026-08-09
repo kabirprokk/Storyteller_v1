@@ -1,15 +1,15 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.110.7'
 
-const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') || 'https://storyteller-v1.netlify.app')
+const allowedOrigins = (Deno.env.get('ALLOWED_ORIGINS') || 'https://storyteller-page-v1.vercel.app,https://storyteller-v1.netlify.app,http://localhost:8000,http://127.0.0.1:8000')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean)
 
 function corsHeaders(request: Request) {
   const origin = request.headers.get('origin') || ''
-  const allowed = allowedOrigins.includes(origin) ? origin : allowedOrigins[0]
+  const allowed = allowedOrigins.includes(origin) ? origin : ''
   return {
-    'Access-Control-Allow-Origin': allowed,
+    ...(allowed ? { 'Access-Control-Allow-Origin': allowed } : {}),
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Vary': 'Origin',

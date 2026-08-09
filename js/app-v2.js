@@ -1433,7 +1433,9 @@ async function route() {
     bind();
 
     if (page === 'story' && currentStory?.status === 'published') {
-      setTimeout(() => recordCurrentStoryView().catch(error => console.error('Could not record view', error)), 3500);
+      // View tracking is non-critical. Do not surface transient network/CORS
+      // failures as uncaught console errors or interrupt reading.
+      setTimeout(() => recordCurrentStoryView().catch(() => {}), 3500);
       loadComments().catch(error => console.error('Could not load comments', error));
       StoryAPI.markRead(currentStory.id, 10);
     }
@@ -2210,8 +2212,9 @@ const clearProfileUsernameError = () => {
 };
 
 function authFail(error) {
-  console.error(error);
   const message = friendlyErrorMessage(error);
+  const isExpectedValidation = /^(Add a title with at least 3 characters|Add story content before publishing)$/i.test(message);
+  if (!isExpectedValidation) console.error(error);
   toast(message);
   if (/sign in/i.test(error.message || '')) setTimeout(() => { location.hash = 'auth/signin'; }, 500);
 }

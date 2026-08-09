@@ -100,6 +100,17 @@ The current Vercel deployment URL is `storyteller-page-v1.vercel.app`.
 
 The legacy Netlify deployment is configured to show a shutdown notice linking to the new Vercel URL.
 
+## Deploying the story-view function
+
+The `record-story-view` Edge Function must allow the production Vercel origin. In the Supabase project, set the `ALLOWED_ORIGINS` secret to `https://storyteller-page-v1.vercel.app` (you may comma-separate the legacy Netlify and localhost origins), then redeploy the function:
+
+```bash
+supabase secrets set ALLOWED_ORIGINS="https://storyteller-page-v1.vercel.app,https://storyteller-v1.netlify.app"
+supabase functions deploy record-story-view
+```
+
+Changing the repository alone does not redeploy an already-hosted Supabase function.
+
 <p align="center">
 Built with ❤️ for writers, readers and dreamers.
 </p>
