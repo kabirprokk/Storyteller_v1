@@ -76,7 +76,7 @@ const instagramLink = value => {
 };
 const stripHtml = value => String(value ?? '').replace(/<[^>]*>/g, ' ');
 const words = value => String(value ?? '').trim().split(/\s+/).filter(Boolean).length;
-const img = story => esc(story?.cover || 'assets/hero-1280.webp');
+const img = story => esc(story?.cover || 'assets/hero-1536.webp');
 const avatarMarkup = (url, initials, tone = '') => `<i class="avatar ${tone}">${url
   ? `<img src="${esc(url)}" alt="" loading="lazy">`
   : esc(initials || 'ST')}</i>`;
@@ -463,6 +463,59 @@ const empty = (title, body) => `
   </div>
 `;
 
+function loadingCards(count = 6) {
+  return Array.from({length:count}, () => `
+    <div class="skeleton-card" aria-hidden="true">
+      <span class="skeleton-block skeleton-cover"></span>
+      <span class="skeleton-block skeleton-line skeleton-line-title"></span>
+      <span class="skeleton-block skeleton-line"></span>
+      <span class="skeleton-block skeleton-line skeleton-line-short"></span>
+    </div>
+  `).join('');
+}
+
+function loadingList(count = 3) {
+  return `<div class="skeleton-list" aria-busy="true" aria-label="Loading items">${Array.from({length:count}, () => `
+    <div class="skeleton-list-row" aria-hidden="true">
+      <span class="skeleton-block skeleton-list-avatar"></span>
+      <span class="skeleton-list-copy"><span class="skeleton-block skeleton-line"></span><span class="skeleton-block skeleton-line skeleton-line-short"></span></span>
+    </div>
+  `).join('')}</div>`;
+}
+
+function loadingPage(page = 'home') {
+  const isReader = page === 'story';
+  const cardSkeletons = loadingCards(isReader ? 1 : 6);
+
+  if (isReader) {
+    return `
+      <div class="page skeleton-page skeleton-reader" aria-busy="true" aria-label="Loading story">
+        <div class="skeleton-reader-head">
+          <span class="skeleton-block skeleton-kicker"></span>
+          <span class="skeleton-block skeleton-reader-title"></span>
+          <span class="skeleton-block skeleton-line"></span>
+        </div>
+        <span class="skeleton-block skeleton-reader-cover"></span>
+        <div class="skeleton-reader-copy">${cardSkeletons}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="page skeleton-page" aria-busy="true" aria-label="Loading stories">
+      <div class="skeleton-mast">
+        <div class="container skeleton-mast-copy">
+          <span class="skeleton-block skeleton-kicker"></span>
+          <span class="skeleton-block skeleton-heading"></span>
+          <span class="skeleton-block skeleton-line"></span>
+          <span class="skeleton-block skeleton-line skeleton-line-short"></span>
+        </div>
+      </div>
+      <section><div class="container skeleton-grid">${cardSkeletons}</div></section>
+    </div>
+  `;
+}
+
 const footer = () => `
   <footer>
     <div class="container">
@@ -524,9 +577,9 @@ function home() {
     <div class="page">
       <div class="hero">
         <div class="hero-bg" aria-hidden="true">
-          <div class="hero-slide hero-slide-mountain active"></div>
-          <div class="hero-slide hero-slide-logo"></div>
-          <div class="hero-slide hero-slide-stories"></div>
+          <div class="hero-slide hero-slide-mountain active" data-media-src="assets/hero-1536.webp"></div>
+          <div class="hero-slide hero-slide-logo" data-media-src="assets/storyteller-mark-1024.webp"></div>
+          <div class="hero-slide hero-slide-stories" data-media-src="assets/hero-stories-1672.webp"></div>
         </div>
         <div class="container">
           <div class="hero-copy">
@@ -551,7 +604,7 @@ function home() {
               </div>
             </div>
             <div class="featured">
-              <a class="feature-card" style="background-image:linear-gradient(0deg,#000e,transparent 70%),url('${img(featured)}')" href="#story/${featured.slug}">
+              <a class="feature-card" data-media-src="${img(featured)}" style="background-image:linear-gradient(0deg,#000e,transparent 70%),url('${img(featured)}')" href="#story/${featured.slug}">
                 <div>
                   <span class="eyebrow">${esc(featured.cat)} · ${esc(featured.time)}</span>
                   <h2>${esc(featured.title)}</h2>
@@ -761,7 +814,7 @@ function reader(story) {
           </div>
         </div>
         ${isPublished ? `
-          <div id="commentList"></div>
+          <div id="commentList">${loadingList(3)}</div>
           <textarea id="commentBody" maxlength="2000" placeholder="Leave a thoughtful response..." aria-label="Comment text"></textarea>
           <button class="btn primary" id="comment">Post comment</button>
         ` : empty('Comments locked', 'Publish this draft to start a conversation.')}
@@ -1065,8 +1118,8 @@ function assetLibrary() {
   const assets = [
     { type: 'image', title: 'Storyteller mark', src: 'assets/storyteller-mark.png', note: 'Original brand artwork' },
     { type: 'image', title: 'Optimized app icon', src: 'assets/storyteller-mark-512.webp', note: 'Lightweight icon used by the app' },
-    { type: 'image', title: 'Hero mountain artwork', src: 'assets/hero-1280.webp', note: 'Homepage cinematic background' },
-    { type: 'image', title: 'Story world artwork', src: 'assets/hero-stories-1280.webp', note: 'Editorial story artwork' },
+    { type: 'image', title: 'Hero mountain artwork', src: 'assets/hero-1536.webp', note: 'Homepage cinematic background' },
+    { type: 'image', title: 'Story world artwork', src: 'assets/hero-stories-1672.webp', note: 'Editorial story artwork' },
     { type: 'image', title: 'Social preview image', src: 'assets/og-image.jpg', note: 'Preview image for link sharing' },
     { type: 'video', title: 'StoryTeller intro video', src: 'assets/StoryTeller-intro.mp4', note: 'Replay the first-visit intro anytime' },
     { type: 'audio', title: 'Storyteller theme song', src: 'assets/storyteller-theme-song.mp3', note: 'Local theme music' },
@@ -1389,7 +1442,7 @@ async function route() {
   }
 
   const [page, arg] = (location.hash.slice(1) || 'home').split('/');
-  $('#app').innerHTML = '<div class="page auth-wrap"><div class="loader"></div></div>';
+  $('#app').innerHTML = loadingPage(page);
 
   try {
     if (page === 'story') {
@@ -1543,6 +1596,7 @@ function enhanceFormLabels() {
 
 function bind() {
   startHeroRotation();
+  bindMediaSkeletons();
   enhanceFormLabels();
   requestAnimationFrame(() => $$('.reveal').forEach(card => card.classList.add('seen')));
 
@@ -1925,6 +1979,8 @@ function startHeroRotation() {
   const slides = $$('.hero-slide');
   if (slides.length < 2) return;
 
+  slides.forEach(slide => loadBackgroundMedia(slide));
+
   slides.forEach((slide, index) => slide.classList.toggle('active', index === 0));
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -1935,6 +1991,32 @@ function startHeroRotation() {
     active = (active + 1) % slides.length;
     slides[active].classList.add('active');
   }, 30000);
+}
+
+function loadBackgroundMedia(element) {
+  const source = element?.dataset.mediaSrc;
+  if (!source || element.classList.contains('media-ready')) return;
+  element.classList.add('media-shell');
+  const preload = new Image();
+  const finish = () => element.classList.add('media-ready');
+  preload.addEventListener('load', finish, {once:true});
+  preload.addEventListener('error', finish, {once:true});
+  preload.src = source;
+}
+
+function bindMediaSkeletons() {
+  $$('.cover img,.reader-cover img,.avatar img,.profile-avatar img,.asset-card img,.result img').forEach(image => {
+    const frame = image.parentElement;
+    if (!frame) return;
+    frame.classList.add('media-shell');
+    const finish = () => frame.classList.add('media-ready');
+    if (image.complete) finish();
+    else {
+      image.addEventListener('load', finish, {once:true});
+      image.addEventListener('error', finish, {once:true});
+    }
+  });
+  $$('[data-media-src]').forEach(loadBackgroundMedia);
 }
 
 async function handlePasswordReset(event) {
@@ -2080,6 +2162,8 @@ async function filter() {
     query: $('#exploreSearch').value.trim(),
     sort: $('#sort').value,
   };
+
+  if ($('#storyGrid')) $('#storyGrid').innerHTML = loadingCards(6);
 
   const results = await StoryAPI.stories({ ...browseState, from: 0, to: 11 });
   if (requestId !== filterRequest) return;
@@ -2324,6 +2408,7 @@ $('#searchInput').oninput = debounce(async event => {
   const query = event.target.value.trim();
   if (!query) return ($('#results').innerHTML = '');
   try {
+    $('#results').innerHTML = loadingList(3);
     const results = await StoryAPI.stories({ query, to: 4 });
     $('#results').innerHTML = results.length ? results.map(story => `
       <a class="result" href="#story/${encodeURIComponent(story.slug)}">
@@ -2331,6 +2416,7 @@ $('#searchInput').oninput = debounce(async event => {
         <span><b>${esc(story.title)}</b><small>${esc(story.author)}</small></span>
       </a>
     `).join('') : empty('No matches', 'Try another title or subtitle.');
+    bindMediaSkeletons();
   } catch (error) {
     $('#results').innerHTML = empty('Search unavailable', 'Please try again.');
   }
@@ -2343,6 +2429,7 @@ $('#bell').onclick = async () => {
   try {
     $('#notifications').classList.toggle('open');
     syncChromeIcons();
+    $('#notificationList').innerHTML = loadingList(3);
     const items = await StoryAPI.notifications();
     $('#notificationList').innerHTML = items.length
       ? items.map(notification => `
@@ -2355,6 +2442,7 @@ $('#bell').onclick = async () => {
           </div>
         `).join('')
       : empty('All caught up', 'No notifications.');
+    bindMediaSkeletons();
   } catch (error) {
     authFail(error);
   }

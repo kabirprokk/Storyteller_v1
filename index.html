@@ -34,7 +34,7 @@
       "@id": "https://storyteller-page-v1.vercel.app/#organization",
       "name": "Storyteller",
       "url": "https://storyteller-page-v1.vercel.app/",
-      "logo": "https://storyteller-page-v1.vercel.app/assets/storyteller-mark-512.webp",
+      "logo": "https://storyteller-page-v1.vercel.app/assets/storyteller-mark-1024.webp",
       "sameAs": ["https://github.com/kabirprokk/Storyteller_v1"],
       "contactPoint": {
         "@type": "ContactPoint",
@@ -69,7 +69,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20260809-3">
+<link rel="stylesheet" href="css/styles.css?v=20260809-4">
 <link rel="stylesheet" href="css/human-verification.css?v=20260722-5">
 <link rel="manifest" href="manifest.json">
 </head>
@@ -94,7 +94,23 @@
     <button id="navAvatar" class="avatar" aria-label="Open profile">ST</button>
   </div>
 </header>
-<main id="app"></main>
+<main id="app">
+  <div class="page skeleton-page" aria-busy="true" aria-label="Loading stories">
+    <div class="skeleton-mast">
+      <div class="container skeleton-mast-copy">
+        <span class="skeleton-block skeleton-kicker"></span>
+        <span class="skeleton-block skeleton-heading"></span>
+        <span class="skeleton-block skeleton-line"></span>
+        <span class="skeleton-block skeleton-line skeleton-line-short"></span>
+      </div>
+    </div>
+    <section><div class="container skeleton-grid">
+      <div class="skeleton-card"><span class="skeleton-block skeleton-cover"></span><span class="skeleton-block skeleton-line skeleton-line-title"></span><span class="skeleton-block skeleton-line"></span></div>
+      <div class="skeleton-card"><span class="skeleton-block skeleton-cover"></span><span class="skeleton-block skeleton-line skeleton-line-title"></span><span class="skeleton-block skeleton-line"></span></div>
+      <div class="skeleton-card"><span class="skeleton-block skeleton-cover"></span><span class="skeleton-block skeleton-line skeleton-line-title"></span><span class="skeleton-block skeleton-line"></span></div>
+    </div></section>
+  </div>
+</main>
 <div id="search" class="overlay" role="dialog" aria-modal="true" aria-label="Search stories">
   <div class="search-panel">
     <label>Search<input id="searchInput" placeholder="Search stories, authors, tags..."><kbd>ESC</kbd></label>
@@ -139,7 +155,7 @@
 <script src="vendor/dompurify-3.4.12.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/supabase-service.js?v=20260809-4"></script>
-<script src="js/app-v2.js?v=20260809-8"></script>
+<script src="js/app-v2.js?v=20260809-9"></script>
 <script src="js/intro-gate.js?v=20260726-2"></script>
 <script src="js/human-verification.js?v=20260726-2"></script>
 <script src="js/audio-controller.js?v=20260722-1"></script>
